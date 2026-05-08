@@ -4,17 +4,30 @@
 
 # Booth
 
-> The voice layer for your AI agent on Telegram.
+> Voice for the AI agent in your pocket.
 
-There are already a dozen Telegram bridges for AI coding agents. Every one of them ships **text only**. Booth doesn't try to be another bridge — it drops in alongside whichever one you already use and adds **voice** on both sides.
+I started messaging my agent constantly when I wasn't at my computer — phone, parking lot, between meetings. Texting worked, but voice was what I actually wanted. Half the time my hands were full or my eyes were on something else.
 
-Local TTS. Local STT. No API keys. No cloud bills. Mac menu-bar app, free forever.
+So I built it. Booth turns my agent's replies into real voice notes on Telegram, and transcribes mine on the way back. Round-trip in a few seconds, in the same chat I was already in.
+
+The picture in my head: my agent at a radio booth, broadcasting from a back room while I'm out running my life. Dispatching my AI workflows. Watching the shop. Picking up when I call.
+
+That's where the name came from.
 
 <p align="center">
   <img src="docs/screenshots/telegram-chat-example.jpg" alt="Booth voice messages in a Telegram chat with an AI agent" width="320" />
   <br/>
   <em>What it actually looks like — voice notes back and forth with your agent, on the phone you already have.</em>
 </p>
+
+## What Booth is, in plain English
+
+A small Mac menu-bar app + a tiny command-line tool. It drops in next to whatever Telegram-to-AI setup you already use — your existing chat bot keeps doing chat, Booth adds **voice** on both ends.
+
+- When your agent wants to reply with voice, it calls `booth say "..."`. A real voice note shows up on your phone in about three seconds.
+- When you send a voice note, your agent hands the audio file to `booth transcribe` and gets the text back.
+
+All of it runs on your Mac. No API keys, no cloud bills, no subscription. Free forever. Voice synthesis happens on the Apple Neural Engine via [Kokoro](https://github.com/thewh1teagle/kokoro-onnx); transcription happens via [whisper.cpp](https://github.com/ggerganov/whisper.cpp).
 
 ## Prerequisites
 
