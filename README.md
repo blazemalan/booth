@@ -10,6 +10,16 @@ There are already a dozen Telegram bridges for AI coding agents. Every one of th
 
 Local TTS. Local STT. No API keys. No cloud bills. Mac menu-bar app, free forever.
 
+## Install (have an AI agent? paste this)
+
+If you have an AI coding agent on this Mac (Claude Code, Codex CLI, OpenClaw, custom), tell it to install Booth for you. Paste this into your agent and it'll handle the rest:
+
+> **Install Booth for me.** Repo: `https://github.com/blazemalan/booth`. Clone it, run `./install.sh`, then drop my Telegram bot token at `~/.local/share/booth/telegram_bot_token` (mode 600). When you're done, ask me where I'd like the `booth.md` voice protocol file to live so you can re-read it on every incoming voice message — Claude Code users typically import it from `~/.claude/CLAUDE.md`; Codex and others have their own conventions, pick whatever works.
+
+The agent reads the README, runs the installer, asks where you'd like the protocol file to live, and you're done in about five minutes.
+
+If you'd rather install by hand, jump to [Manual install](#manual-install) below.
+
 ## How it fits
 
 You probably already have a Telegram bridge wired into your agent:
@@ -54,7 +64,7 @@ We may add an iMessage adapter later, but the experience will be a downgrade. Te
 
 People running an always-on AI coding agent locally — Claude Code, Codex CLI, OpenClaw, custom Python — who already have a Telegram bridge and want to actually *talk* to their agent from anywhere.
 
-## Install
+## Manual install
 
 ```bash
 git clone https://github.com/blazemalan/booth.git

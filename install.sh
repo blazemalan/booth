@@ -77,6 +77,10 @@ ok "Whisper model in $WHISPER_DIR"
 # ── 5. Booth state directory
 bold "Step 5: Booth state directory"
 mkdir -p "$BOOTH_HOME"
+# Voice protocol — agent should re-read this on every inbound voice message
+if [ -f "$PROJECT_DIR/booth.md" ]; then
+  cp "$PROJECT_DIR/booth.md" "$BOOTH_HOME/booth.md"
+fi
 ok "$BOOTH_HOME"
 
 # ── 6. Telegram bot token
@@ -158,6 +162,9 @@ echo "  4. Wire your AI agent to call 'booth say \"...\"' for voice replies, and
 echo "     'booth transcribe <audio.oga>' when your Telegram MCP delivers a"
 echo "     voice note. Booth doesn't bridge Telegram itself — your existing"
 echo "     MCP plugin keeps doing that. Booth is the voice layer on top."
+echo "  5. (Claude Code only) Wire the auto-injecting voice protocol hook:"
+echo "       $PROJECT_DIR/scripts/install_claude_hook.sh"
+echo "     Other agents — point yours at $BOOTH_HOME/booth.md however you like."
 echo
 echo "Troubleshooting:"
 echo "  - daemon log: $BOOTH_HOME/voice_daemon.log"
