@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pager — AppleScript injector for self-triggered slash commands.
+"""Booth — AppleScript injector for self-triggered slash commands.
 
 Why this exists: when your AI agent's running in Terminal.app and you're not
 at the keyboard, slash commands like `/compact` need a way to be typed into
@@ -16,12 +16,12 @@ Limitations:
     running in a different window, the keystrokes go to the wrong session.
     Caller is responsible for confirming the window assumption.
   - Requires Accessibility permission for Terminal.app and for whatever
-    process is invoking osascript (Pager's app bundle, usually).
+    process is invoking osascript (Booth's app bundle, usually).
   - This is a self-write — you're scripting your OWN terminal session, not
     a remote one. Don't use it to drive other people's processes.
 
 Usage:
-    from pager.injector import inject
+    from booth.injector import inject
     inject("/compact")
     inject("echo hello", terminal="Terminal")
 """
@@ -41,7 +41,7 @@ def inject(text: str, terminal: str = "Terminal") -> None:
     """
     if terminal != "Terminal":
         raise NotImplementedError(
-            f"Pager only supports Terminal.app for now; got terminal={terminal!r}"
+            f"Booth only supports Terminal.app for now; got terminal={terminal!r}"
         )
 
     # The single quotes in our script need to coexist with shell escaping;

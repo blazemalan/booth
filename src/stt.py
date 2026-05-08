@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Pager — inbound voice transcription.
+"""Booth — inbound voice transcription.
 
 Pipeline: Telegram .ogg attachment → afconvert → wav → whisper.cpp → text.
 
 Usage:
-    python -m pager.stt path/to/voice.oga
+    python -m booth.stt path/to/voice.oga
     # prints transcript to stdout
 """
 from __future__ import annotations
@@ -25,7 +25,7 @@ def transcribe(input_audio: Path) -> str:
     if not WHISPER_MODEL.exists():
         raise SystemExit(f"Whisper model missing at {WHISPER_MODEL}. Run install.sh.")
 
-    with tempfile.TemporaryDirectory(prefix="pager_stt_") as td_str:
+    with tempfile.TemporaryDirectory(prefix="booth_stt_") as td_str:
         td = Path(td_str)
         wav_path = td / "audio.wav"
 

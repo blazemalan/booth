@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Pager — outbound voice. Send a Telegram voice bubble in the configured voice.
+"""Booth — outbound voice. Send a Telegram voice bubble in the configured voice.
 
 Pipeline: text → Kokoro daemon → Opus OGG → Telegram sendVoice.
 
 Usage:
-    python -m pager.say "Hello, Blaze."
-    python -m pager.say --voice af_bella --speed 1.1 "Custom voice."
-    python -m pager.say --dry-run "Test the synth without sending."
+    python -m booth.say "Hello, Blaze."
+    python -m booth.say --voice af_bella --speed 1.1 "Custom voice."
+    python -m booth.say --dry-run "Test the synth without sending."
 
-Reads bot token from $PAGER_HOME/telegram_bot_token (default: ~/.local/share/pager/).
-Defaults the chat_id to the first entry in $PAGER_HOME/allowlist.
+Reads bot token from $BOOTH_HOME/telegram_bot_token (default: ~/.local/share/booth/).
+Defaults the chat_id to the first entry in $BOOTH_HOME/allowlist.
 
 Auto-spawns the voice daemon if the socket isn't there.
 """
@@ -27,11 +27,11 @@ import urllib.request
 from pathlib import Path
 
 HOME = Path.home()
-PAGER_HOME = Path(os.environ.get("PAGER_HOME", HOME / ".local/share/pager"))
-TOKEN_FILE = PAGER_HOME / "telegram_bot_token"
-ALLOWLIST_FILE = PAGER_HOME / "allowlist"
+BOOTH_HOME = Path(os.environ.get("BOOTH_HOME", HOME / ".local/share/booth"))
+TOKEN_FILE = BOOTH_HOME / "telegram_bot_token"
+ALLOWLIST_FILE = BOOTH_HOME / "allowlist"
 
-DAEMON_SOCKET = Path("/tmp/pager_voice.sock")
+DAEMON_SOCKET = Path("/tmp/booth_voice.sock")
 DAEMON_SCRIPT = Path(__file__).parent / "voice_daemon.py"
 
 DEFAULT_VOICE = "af_heart"
@@ -79,7 +79,7 @@ def spawn_daemon() -> None:
         if daemon_alive():
             return
         time.sleep(0.2)
-    raise SystemExit("daemon failed to start within 15s — check ~/.local/share/pager/voice_daemon.log")
+    raise SystemExit("daemon failed to start within 15s — check ~/.local/share/booth/voice_daemon.log")
 
 
 def synth_via_daemon(text: str, voice: str, speed: float, out_wav: Path) -> dict:
@@ -113,7 +113,7 @@ def encode_opus(wav_path: Path, ogg_path: Path) -> None:
 
 
 def send_voice(token: str, chat_id: str, ogg_path: Path, caption: str | None) -> dict:
-    boundary = "----PagerVoiceBoundary7393"
+    boundary = "----BoothVoiceBoundary7393"
     parts = []
 
     def add_field(name: str, value: str):
@@ -161,7 +161,7 @@ def main():
     if not text:
         ap.error("provide text as positional arg or --text")
 
-    with tempfile.TemporaryDirectory(prefix="pager_voice_") as td_str:
+    with tempfile.TemporaryDirectory(prefix="booth_voice_") as td_str:
         td = Path("/tmp" if args.keep else td_str)
         wav_path = td / "voice.wav"
         ogg_path = td / "voice.ogg"

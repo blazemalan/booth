@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""Pager — inbound listener. Polls Telegram for new voice notes from your bot.
+"""Booth — inbound listener. Polls Telegram for new voice notes from your bot.
 
 For each voice note received from an allowlisted chat:
   1. Download the .ogg
   2. Transcribe with stt.transcribe()
-  3. Append the transcript to ~/.local/share/pager/inbox.jsonl
+  3. Append the transcript to ~/.local/share/booth/inbox.jsonl
 
 Your AI agent watches inbox.jsonl (or you wire it however you want).
 
 Usage:
-    python -m pager.listen
+    python -m booth.listen
     # runs forever, long-polling getUpdates
 
 Configure:
-    $PAGER_HOME/telegram_bot_token  — bot token
-    $PAGER_HOME/allowlist           — newline-separated chat_ids (only these are accepted)
+    $BOOTH_HOME/telegram_bot_token  — bot token
+    $BOOTH_HOME/allowlist           — newline-separated chat_ids (only these are accepted)
 """
 from __future__ import annotations
 
@@ -29,13 +29,13 @@ from pathlib import Path
 from .stt import transcribe
 
 HOME = Path.home()
-PAGER_HOME = Path(os.environ.get("PAGER_HOME", HOME / ".local/share/pager"))
-TOKEN_FILE = PAGER_HOME / "telegram_bot_token"
-ALLOWLIST_FILE = PAGER_HOME / "allowlist"
-INBOX_FILE = PAGER_HOME / "inbox.jsonl"
-OFFSET_FILE = PAGER_HOME / "update_offset"
-LOG_FILE = PAGER_HOME / "listen.log"
-DOWNLOAD_DIR = PAGER_HOME / "voice_inbox"
+BOOTH_HOME = Path(os.environ.get("BOOTH_HOME", HOME / ".local/share/booth"))
+TOKEN_FILE = BOOTH_HOME / "telegram_bot_token"
+ALLOWLIST_FILE = BOOTH_HOME / "allowlist"
+INBOX_FILE = BOOTH_HOME / "inbox.jsonl"
+OFFSET_FILE = BOOTH_HOME / "update_offset"
+LOG_FILE = BOOTH_HOME / "listen.log"
+DOWNLOAD_DIR = BOOTH_HOME / "voice_inbox"
 
 LONG_POLL_TIMEOUT = 30
 

@@ -1,4 +1,4 @@
-"""py2app build config for Pager.app.
+"""py2app build config for Booth.app.
 
 Build:
     cd app
@@ -27,9 +27,9 @@ if SRC_PARENT.exists():
 OPTIONS = {
     "iconfile": "icon.icns",
     "plist": {
-        "CFBundleName": "Pager",
-        "CFBundleDisplayName": "Pager",
-        "CFBundleIdentifier": "io.github.blazemalan.pager",
+        "CFBundleName": "Booth",
+        "CFBundleDisplayName": "Booth",
+        "CFBundleIdentifier": "io.github.blazemalan.booth",
         "CFBundleVersion": "0.1.0",
         "CFBundleShortVersionString": "0.1.0",
         "LSUIElement": True,
@@ -41,7 +41,7 @@ OPTIONS = {
 
 setup(
     app=APP,
-    name="Pager",
+    name="Booth",
     options={"py2app": OPTIONS},
     setup_requires=["py2app"],
 )

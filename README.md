@@ -1,14 +1,14 @@
 <p align="center">
-  <img src="app/icon.png" alt="Pager" width="160" />
+  <img src="app/icon.png" alt="Booth" width="160" />
 </p>
 
-# Pager
+# Booth
 
 > Voice notes from your local AI agent, over Telegram.
 
 There are already a dozen Telegram bridges for AI coding agents. Every one of them ships **text only**.
 
-Pager ships **voice**. Your agent sends you proper voice bubbles. You reply with voice notes. Local TTS. Local STT. No API keys. No cloud bills. Mac menu-bar app, free forever.
+Booth ships **voice**. Your agent sends you proper voice bubbles. You reply with voice notes. Local TTS. Local STT. No API keys. No cloud bills. Mac menu-bar app, free forever.
 
 ## Why this exists
 
@@ -20,19 +20,19 @@ The "talk to your AI agent over Telegram" space is real and getting bigger:
 - [TeleCodex](https://github.com/benedict2310/telecodex) — Codex CLI bridge
 - [Composio's Telegram MCP](https://composio.dev/toolkits/telegram) — generic agent bridge
 
-These all give you text. They're great. We use Claude Code Channels ourselves — it's how we built Pager in the first place.
+These all give you text. They're great. We use Claude Code Channels ourselves — it's how we built Booth in the first place.
 
 But text on its own is cold. When your AI sends you a 200-word status update at 3pm and you're in a meeting, you read it later. When your AI sends you a **voice note**, you hear it. You hear the urgency. You hear the personality. The bandwidth is different.
 
-Pager is the voice layer. It drops in alongside whatever bridge you already use, or runs standalone with its own thin Telegram bot poller. Your agent calls a local script with text; Pager synthesizes locally and ships a real voice bubble to your phone. You record a voice note back; Pager transcribes it locally and hands the text to your agent.
+Booth is the voice layer. It drops in alongside whatever bridge you already use, or runs standalone with its own thin Telegram bot poller. Your agent calls a local script with text; Booth synthesizes locally and ships a real voice bubble to your phone. You record a voice note back; Booth transcribes it locally and hands the text to your agent.
 
 That's the whole product.
 
 ## What it does
 
-- **Outbound voice:** your agent calls `pager say "..."`. Pager synthesizes the audio locally with [Kokoro-onnx](https://github.com/thewh1teagle/kokoro-onnx) on the Apple Neural Engine, encodes Opus, sends it to your Telegram bot. Your phone buzzes with a voice bubble in ~2.5 seconds.
-- **Inbound voice:** when you send your bot a voice note, Pager downloads it, transcribes it locally with [whisper.cpp](https://github.com/ggerganov/whisper.cpp), and writes the text where your agent will pick it up.
-- **Self-trigger (Claude Code only):** Pager ships an AppleScript helper your agent can call to send slash commands like `/compact` to its own terminal session — useful when you're not at the keyboard.
+- **Outbound voice:** your agent calls `booth say "..."`. Booth synthesizes the audio locally with [Kokoro-onnx](https://github.com/thewh1teagle/kokoro-onnx) on the Apple Neural Engine, encodes Opus, sends it to your Telegram bot. Your phone buzzes with a voice bubble in ~2.5 seconds.
+- **Inbound voice:** when you send your bot a voice note, Booth downloads it, transcribes it locally with [whisper.cpp](https://github.com/ggerganov/whisper.cpp), and writes the text where your agent will pick it up.
+- **Self-trigger (Claude Code only):** Booth ships an AppleScript helper your agent can call to send slash commands like `/compact` to its own terminal session — useful when you're not at the keyboard.
 
 ## Why Telegram (and not iMessage)
 
@@ -50,14 +50,14 @@ People running an always-on AI coding agent locally — Claude Code, Codex CLI, 
 
 ## Hotkey
 
-- **Cmd + Option + P** — toggle Pager listening on/off
+- **Cmd + Option + P** — toggle Booth listening on/off
 - Menu bar icon shows status: green pulse = listening, red = paused, gray = stopped
 
 ## Install
 
 ```bash
-git clone https://github.com/blazemalan/pager.git
-cd pager
+git clone https://github.com/blazemalan/booth.git
+cd booth
 ./install.sh
 ```
 
@@ -66,7 +66,7 @@ The installer:
 - Downloads Kokoro TTS models (~196 MB) to `~/.local/share/kokoro-tts/`
 - Downloads Whisper.cpp base model (~150 MB) to `~/.local/share/whisper/`
 - Builds the `.app` bundle with `py2app`
-- Copies it to `/Applications/Pager.app`
+- Copies it to `/Applications/Booth.app`
 - Installs `opus-tools` and `whisper-cpp` via Homebrew if missing
 - Asks for your Telegram bot token (one-time)
 - Wires the menu-bar app and starts the listener
@@ -87,7 +87,7 @@ You'll need a Telegram bot token. Two paths:
 ## How it works
 
 ```
-Your AI agent  →  pager say "..."  →  Kokoro TTS  →  Opus encode
+Your AI agent  →  booth say "..."  →  Kokoro TTS  →  Opus encode
                                                           ↓
                                               Telegram sendVoice
                                                           ↓
@@ -106,7 +106,7 @@ All synthesis and transcription happen on your Mac. The only network traffic is 
 
 ## Voices
 
-Kokoro ships 50+ voices, graded A through F by the model author based on training data quality. Pager defaults to `af_heart` — the only A-grade voice in the roster. Swap voices via the menu-bar settings.
+Kokoro ships 50+ voices, graded A through F by the model author based on training data quality. Booth defaults to `af_heart` — the only A-grade voice in the roster. Swap voices via the menu-bar settings.
 
 ## Compatibility
 
@@ -118,9 +118,9 @@ Kokoro ships 50+ voices, graded A through F by the model author based on trainin
 | Custom Python/CLI agent | ✅ | ✅ | ⚠️ (terminal-based only) |
 | Cloud-only bots (ChatGPT web, Claude.ai) | ❌ | ❌ | ❌ |
 
-If your agent runs locally and can shell out to a script, Pager works. The self-trigger trick is specific to terminal-based agents that read keyboard input.
+If your agent runs locally and can shell out to a script, Booth works. The self-trigger trick is specific to terminal-based agents that read keyboard input.
 
-> **IDE-based agents** (Cursor, Aider) work for one-shot voice exchanges if you script them, but they're session-based, not always-on, so they're not Pager's primary use case.
+> **IDE-based agents** (Cursor, Aider) work for one-shot voice exchanges if you script them, but they're session-based, not always-on, so they're not Booth's primary use case.
 
 ## Roadmap
 

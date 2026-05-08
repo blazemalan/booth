@@ -7,9 +7,9 @@ If you already have a Telegram bot, skip this. You just need the bot token to pa
 1. Open Telegram on your phone or desktop.
 2. Search for `@BotFather` and start a chat with the verified one (blue checkmark).
 3. Send `/newbot`.
-4. BotFather asks for a **name** — what appears in chats. Anything works. Example: `Pager`.
-5. BotFather asks for a **username** — must end in `bot`. Example: `my_pager_bot`.
-6. BotFather replies with a **token** that looks like `1234567890:AAH...`. **Copy it**. This is what you paste during Pager install.
+4. BotFather asks for a **name** — what appears in chats. Anything works. Example: `Booth`.
+5. BotFather asks for a **username** — must end in `bot`. Example: `my_booth_bot`.
+6. BotFather replies with a **token** that looks like `1234567890:AAH...`. **Copy it**. This is what you paste during Booth install.
 
 ## 2. Start a chat with your bot
 
@@ -19,7 +19,7 @@ If you already have a Telegram bot, skip this. You just need the bot token to pa
 
 ## 3. Find your chat ID
 
-The Pager listener will pick this up automatically the first time you message your bot, but if you want to lock the allowlist before running, you can grab it manually:
+The Booth listener will pick this up automatically the first time you message your bot, but if you want to lock the allowlist before running, you can grab it manually:
 
 ```bash
 curl "https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates"
@@ -30,7 +30,7 @@ Look for `"chat":{"id":12345678,...}` in the JSON. That number is your chat ID.
 Add it to the allowlist:
 
 ```bash
-echo "12345678" >> ~/.local/share/pager/allowlist
+echo "12345678" >> ~/.local/share/booth/allowlist
 ```
 
 Without an allowlist entry, your bot will silently reject all incoming messages — that's the security default.
@@ -47,7 +47,7 @@ These don't affect functionality but they make the bot feel real.
 
 ## Troubleshooting
 
-- **Bot doesn't respond at all:** check `~/.local/share/pager/listen.log`. Common cause: no allowlist entry for your chat_id.
+- **Bot doesn't respond at all:** check `~/.local/share/booth/listen.log`. Common cause: no allowlist entry for your chat_id.
 - **Voice notes arrive but don't transcribe:** check whisper-cpp install (`which whisper-cli`) and the model file at `~/.local/share/whisper/ggml-base.en.bin`.
 - **Voice bubbles don't render correctly on the recipient end:** Telegram needs Opus OGG, not WAV. Confirm `which opusenc` returns a path.
 - **"Conflict: terminated by other getUpdates request":** another listener is polling the same bot. Stop one of them.

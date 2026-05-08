@@ -5,27 +5,24 @@
 
 ## Concept
 
-A 1990s belt-clip pager, pixel-art style, with a glowing green LED and a single line of text on the screen.
+Booth is "the radio booth your AI broadcasts from." The icon should evoke: a small vintage broadcast booth, the ON AIR red-light sign, the warmth of analog radio. Not a microphone (we ship to one — we are not one). Not a generic chat bubble.
 
-The tone is "I am not impressed by AI hype, I just need the buzz." Dry, retro, confident. The audience is people who've seen too many AI launch videos with neural-network swooshes; they'll respond to something that feels like it was designed by someone who's already over the trend.
+Cohesive sibling to Claudible: same warm orange background, same illustrated beige/cream rendering style, similar lighting. Reads as "the same author made these two."
 
 ## Style spec
 
-- **Format:** square, 1024×1024 SVG → PNG → ICNS pipeline
-- **Vibe:** chunky pixel art, low color count
-- **Palette:**
-  - Background: `#0a0a0a` (matches cinder.works dark)
-  - Pager body: `#1a1a1a` outline / `#222` body fill
-  - Screen: `#0e1f0e` recessed, with `#3aff3a` text and a soft bloom
-  - LED: `#3aff3a` solid, with `#aaffaa` core highlight
-  - Accent rim (optional): `#ff6b35` ember (cinder-works brand bridge)
-- **Pager screen text:** `PAGER` or single-line message — `MSG FROM CINDER` works as an in-joke variant for screenshots
-- **Antenna:** stubby, slightly bent, suggests "this thing has been to war"
-- **No gradients on the body.** Flat shapes only. The LED gets a small bloom.
+- **Format:** 1024×1024 PNG → ICNS pipeline. Rounded square corner radius matching macOS icon norms.
+- **Vibe:** soft illustrated, modern flat with subtle shading. Not pixel art. Not photorealistic.
+- **Background:** warm orange gradient `#ff8c4d` → `#ff6b35` (matches Claudible's bg).
+- **Subject:** a small beige (`#f5e6cc`) vintage broadcast scene. Pick one of:
+  - **Option 1:** An ON AIR rectangular sign with a glowing red dot.
+  - **Option 2:** A retro radio mic on a stand, soft drop shadow.
+  - **Option 3:** A small radio booth window with a person silhouette inside (more illustrative).
+- **Accent light:** a single `#3aff3a` green LED somewhere on the subject — keeps the "live" feel and bridges to Booth's "I am on" indicator semantics in the menu bar.
 
 ## Menu bar template (separate file)
 
-`app/menubarTemplate.png` is a 22×22 black-on-transparent monochrome glyph used in the macOS menu bar. macOS auto-inverts it for dark mode. The shape: pager silhouette with the LED dot. Strict 1px stroke.
+`app/menubarTemplate.png` — 22×22 black-on-transparent monochrome. macOS auto-inverts in dark mode. The shape: minimal silhouette of the chosen subject. Strict 1px stroke, no fills.
 
 ## What it should NOT look like
 
@@ -34,11 +31,10 @@ The tone is "I am not impressed by AI hype, I just need the buzz." Dry, retro, c
 - ❌ A waveform
 - ❌ A neural-network node graph
 - ❌ Anything with the word "AI" in the icon
-- ❌ A microphone (we ship to one — we are not one)
+- ❌ A microphone alone with no booth context (too generic)
 
 ## Reference touchstones
 
-- The Motorola Bravo Plus (mid-90s alphanumeric pager)
-- The minimal LED on early PalmPilots
-- The Macintosh System 7 "Welcome to Macintosh" cleanness
-- The bone-dry industrial design of a Casio F-91W
+- The classic ON AIR neon/light sign in any film about radio
+- The warm illustrated style of modern macOS dock icons (Mail, Messages, Music)
+- The Claudible icon, for direct sibling-app cohesion

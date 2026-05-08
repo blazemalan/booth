@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pager menu-bar app.
+"""Booth menu-bar app.
 
 Lives in the macOS menu bar, manages the voice daemon and the inbound listener,
 and gives you Quit + log access.
@@ -19,11 +19,11 @@ from pathlib import Path
 import rumps
 
 HOME = Path.home()
-PAGER_HOME = Path(os.environ.get("PAGER_HOME", HOME / ".local/share/pager"))
-TOKEN_FILE = PAGER_HOME / "telegram_bot_token"
-LISTEN_LOG = PAGER_HOME / "listen.log"
-DAEMON_LOG = PAGER_HOME / "voice_daemon.log"
-DAEMON_SOCKET = Path("/tmp/pager_voice.sock")
+BOOTH_HOME = Path(os.environ.get("BOOTH_HOME", HOME / ".local/share/booth"))
+TOKEN_FILE = BOOTH_HOME / "telegram_bot_token"
+LISTEN_LOG = BOOTH_HOME / "listen.log"
+DAEMON_LOG = BOOTH_HOME / "voice_daemon.log"
+DAEMON_SOCKET = Path("/tmp/booth_voice.sock")
 
 # Resolve src/ both in dev (alongside app/) and in the bundled .app
 HERE = Path(__file__).resolve().parent
@@ -49,7 +49,7 @@ class App(rumps.App):
         # Use template image so macOS auto-inverts in dark mode.
         icon_path = HERE / "menubarTemplate.png"
         super().__init__(
-            "Pager",
+            "Booth",
             title="📟",  # placeholder until icon ships
             icon=str(icon_path) if icon_path.exists() else None,
             template=True,
@@ -64,7 +64,7 @@ class App(rumps.App):
             rumps.MenuItem("Open listener log", callback=self._open_listen_log),
             rumps.MenuItem("Open daemon log", callback=self._open_daemon_log),
             None,
-            rumps.MenuItem("Quit Pager", callback=self._on_quit),
+            rumps.MenuItem("Quit Booth", callback=self._on_quit),
         ]
         threading.Thread(target=self._init_bg, daemon=True).start()
 
@@ -73,7 +73,7 @@ class App(rumps.App):
         if not TOKEN_FILE.exists():
             self.menu["Status: starting…"].title = "Status: no bot token"
             rumps.notification(
-                "Pager", "Setup needed",
+                "Booth", "Setup needed",
                 f"Drop your Telegram bot token at {TOKEN_FILE}",
             )
             return
@@ -127,18 +127,18 @@ class App(rumps.App):
         if LISTEN_LOG.exists():
             subprocess.Popen(["open", str(LISTEN_LOG)])
         else:
-            rumps.notification("Pager", "No log yet", str(LISTEN_LOG))
+            rumps.notification("Booth", "No log yet", str(LISTEN_LOG))
 
     def _open_daemon_log(self, _):
         if DAEMON_LOG.exists():
             subprocess.Popen(["open", str(DAEMON_LOG)])
         else:
-            rumps.notification("Pager", "No log yet", str(DAEMON_LOG))
+            rumps.notification("Booth", "No log yet", str(DAEMON_LOG))
 
     def _on_quit(self, _):
         self._stop_listener()
         # Daemon will idle out on its own (30 min). We don't kill it here
-        # so the user can still send voice with `pager say` after quitting.
+        # so the user can still send voice with `booth say` after quitting.
         rumps.quit_application()
 
     # ── status loop ───────────────────────────────────────────────────

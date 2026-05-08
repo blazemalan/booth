@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Pager voice daemon — keeps Kokoro loaded so synth is fast on every send.
+"""Booth voice daemon — keeps Kokoro loaded so synth is fast on every send.
 
 Lifecycle:
-  - Spawned on demand by `pager say` when the socket isn't there
-  - Listens on /tmp/pager_voice.sock (Unix domain socket)
+  - Spawned on demand by `booth say` when the socket isn't there
+  - Listens on /tmp/booth_voice.sock (Unix domain socket)
   - Loads Kokoro once at startup with CoreML+CPU providers (Apple Neural Engine)
   - 30-minute idle timeout: exits cleanly if no requests in 30 min
-  - PID file at /tmp/pager_voice.pid
+  - PID file at /tmp/booth_voice.pid
 
 Protocol (newline-delimited JSON):
   request:  {"text": str, "voice": str, "speed": float, "out_wav": str}
@@ -24,9 +24,9 @@ import wave
 from pathlib import Path
 
 HOME = Path.home()
-SOCKET_PATH = Path("/tmp/pager_voice.sock")
-PID_PATH = Path("/tmp/pager_voice.pid")
-LOG_PATH = HOME / ".local/share/pager/voice_daemon.log"
+SOCKET_PATH = Path("/tmp/booth_voice.sock")
+PID_PATH = Path("/tmp/booth_voice.pid")
+LOG_PATH = HOME / ".local/share/booth/voice_daemon.log"
 KOKORO_MODEL = HOME / ".local/share/kokoro-tts/kokoro-v1.0.fp16.onnx"
 KOKORO_VOICES = HOME / ".local/share/kokoro-tts/voices-v1.0.bin"
 

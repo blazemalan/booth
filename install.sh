@@ -1,5 +1,5 @@
 #!/bin/bash
-# Pager installer for macOS.
+# Booth installer for macOS.
 #
 # Sets up the menu-bar app, downloads Kokoro TTS + Whisper STT models,
 # wires the launchd agent, and prompts for a Telegram bot token.
@@ -14,16 +14,16 @@ set -e
 PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 KOKORO_DIR="$HOME/.local/share/kokoro-tts"
 WHISPER_DIR="$HOME/.local/share/whisper"
-PAGER_HOME="$HOME/.local/share/pager"
-APP_DEST="/Applications/Pager.app"
-TOKEN_FILE="$PAGER_HOME/telegram_bot_token"
-CHAT_FILE="$PAGER_HOME/allowlist"
+BOOTH_HOME="$HOME/.local/share/booth"
+APP_DEST="/Applications/Booth.app"
+TOKEN_FILE="$BOOTH_HOME/telegram_bot_token"
+CHAT_FILE="$BOOTH_HOME/allowlist"
 
 bold() { printf "\033[1m%s\033[0m\n" "$*"; }
 ok()   { printf "\033[32m[ok]\033[0m %s\n" "$*"; }
 warn() { printf "\033[33m[warn]\033[0m %s\n" "$*"; }
 
-bold "Pager installer"
+bold "Booth installer"
 echo "Project: $PROJECT_DIR"
 echo
 
@@ -33,12 +33,12 @@ command -v brew >/dev/null || { echo "Homebrew required: https://brew.sh"; exit 
 
 OS_MAJOR=$(sw_vers -productVersion | cut -d. -f1)
 if [ "$OS_MAJOR" -lt 13 ]; then
-  warn "macOS $OS_MAJOR detected. Pager targets macOS 13+ (Ventura). Continuing — TTS may be slower."
+  warn "macOS $OS_MAJOR detected. Booth targets macOS 13+ (Ventura). Continuing — TTS may be slower."
 fi
 
 ARCH=$(uname -m)
 if [ "$ARCH" != "arm64" ]; then
-  warn "Intel Mac detected. TTS synthesis will be 3-5x slower without the Neural Engine. Pager will still work."
+  warn "Intel Mac detected. TTS synthesis will be 3-5x slower without the Neural Engine. Booth will still work."
 fi
 ok "system checks"
 
@@ -74,10 +74,10 @@ if [ ! -f "$WHISPER_DIR/ggml-base.en.bin" ]; then
 fi
 ok "Whisper model in $WHISPER_DIR"
 
-# ── 5. Pager state directory
-bold "Step 5: Pager state directory"
-mkdir -p "$PAGER_HOME"
-ok "$PAGER_HOME"
+# ── 5. Booth state directory
+bold "Step 5: Booth state directory"
+mkdir -p "$BOOTH_HOME"
+ok "$BOOTH_HOME"
 
 # ── 6. Telegram bot token
 bold "Step 6: Telegram bot token"
@@ -99,7 +99,7 @@ else
 fi
 
 # ── 7. Build the .app bundle
-bold "Step 7: Build Pager.app"
+bold "Step 7: Build Booth.app"
 cd "$PROJECT_DIR/app"
 PY=$(brew --prefix python@3.12)/bin/python3.12
 
@@ -112,12 +112,12 @@ fi
 # Standalone build for distribution; alias build (-A) is faster for dev.
 .venv/bin/python setup.py py2app
 
-if [ -d "dist/Pager.app" ]; then
+if [ -d "dist/Booth.app" ]; then
   rm -rf "$APP_DEST"
-  cp -R "dist/Pager.app" "$APP_DEST"
-  ok "Pager.app installed to $APP_DEST"
+  cp -R "dist/Booth.app" "$APP_DEST"
+  ok "Booth.app installed to $APP_DEST"
 else
-  warn "py2app build did not produce dist/Pager.app — check the output above."
+  warn "py2app build did not produce dist/Booth.app — check the output above."
 fi
 
 # ── 8. Hotkey daemon (skhd) — optional, for Cmd+Option+P toggle
@@ -128,7 +128,7 @@ else
   echo "Skipping skhd install. To enable Cmd+Option+P toggle later:"
   echo "  brew install koekeishiya/formulae/skhd"
   echo "  Then add to ~/.config/skhd/skhdrc:"
-  echo "    cmd + alt - p : open -a Pager"
+  echo "    cmd + alt - p : open -a Booth"
   echo "  And run: skhd --start-service"
 fi
 
@@ -136,14 +136,14 @@ echo
 bold "Done."
 echo
 echo "Next steps:"
-echo "  1. Open Pager.app from /Applications — it'll start the listener and idle in your menu bar"
+echo "  1. Open Booth.app from /Applications — it'll start the listener and idle in your menu bar"
 echo "  2. Pair your Telegram bot: open it on your phone and send /start"
 echo "  3. Add your chat ID to the allowlist (see docs/BOT_SETUP.md step 3)"
-echo "  4. Test outbound: $PROJECT_DIR/bin/pager say 'Hello, world.'"
+echo "  4. Test outbound: $PROJECT_DIR/bin/booth say 'Hello, world.'"
 echo "  5. Test inbound: send a voice note to your bot from Telegram"
 echo
 echo "Troubleshooting:"
-echo "  - logs: $PAGER_HOME/pager.log"
+echo "  - logs: $BOOTH_HOME/booth.log"
 echo "  - bot token: $TOKEN_FILE"
 echo "  - models: $KOKORO_DIR, $WHISPER_DIR"
 echo
