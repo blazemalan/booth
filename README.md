@@ -10,6 +10,21 @@ There are already a dozen Telegram bridges for AI coding agents. Every one of th
 
 Local TTS. Local STT. No API keys. No cloud bills. Mac menu-bar app, free forever.
 
+## Prerequisites
+
+Booth is the voice layer **on top of** an existing Telegram bridge — it doesn't bridge Telegram itself. Before installing Booth you need:
+
+1. **A Mac** running macOS 13+ (Apple Silicon strongly recommended).
+2. **Homebrew** installed — [brew.sh](https://brew.sh).
+3. **A Telegram bot token.** If you don't have one, the [5-minute walkthrough in `docs/BOT_SETUP.md`](docs/BOT_SETUP.md) gets you one via `@BotFather`.
+4. **A Telegram MCP bridge wired into your AI agent.** Booth assumes inbound text + voice messages already arrive in your agent's context via someone else's plugin. Pick one:
+   - **Claude Code** *(recommended, primary supported path)*: Anthropic's official Telegram channel plugin — `claude-plugins-official` — installs in one command and exposes `<channel source="plugin:telegram:telegram">` blocks for incoming messages. Repo: [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official). After install, launch your Claude Code session with `claude --channels plugin:telegram@claude-plugins-official` (the `--channels` flag is what activates the bridge). Use `/telegram:access` from inside the session to pair your phone.
+   - **Codex CLI**: [TeleCodex](https://github.com/benedict2310/telecodex) is the closest equivalent.
+   - **OpenClaw**: built-in Telegram skill — see [docs.openclaw.ai/channels/telegram](https://docs.openclaw.ai/channels/telegram).
+   - **Custom agent**: anything that polls `getUpdates` on your bot token and feeds the message into your agent's context will work. Booth never polls — it only sends voice and transcribes audio your agent already has.
+
+Once your agent receives Telegram messages and can reply with text, you're ready for Booth.
+
 ## Install (have an AI agent? paste this)
 
 If you have an AI coding agent on this Mac (Claude Code, Codex CLI, OpenClaw, custom), tell it to install Booth for you. Paste this into your agent and it'll handle the rest:
