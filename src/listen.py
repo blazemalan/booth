@@ -26,7 +26,10 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .stt import transcribe
+try:
+    from .stt import transcribe  # imported as package
+except ImportError:
+    from stt import transcribe  # run as script (script's dir on sys.path)
 
 HOME = Path.home()
 BOOTH_HOME = Path(os.environ.get("BOOTH_HOME", HOME / ".local/share/booth"))

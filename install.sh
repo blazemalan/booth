@@ -98,10 +98,23 @@ else
   ok "Token already configured at $TOKEN_FILE"
 fi
 
-# ── 7. Build the .app bundle
-bold "Step 7: Build Booth.app"
-cd "$PROJECT_DIR/app"
+# ── 7. Runtime venv at $BOOTH_HOME/.venv
+# This venv holds kokoro_onnx + onnxruntime + numpy. Booth.app's bundled python
+# only has rumps; the menu-bar app subprocess-launches src/listen.py and
+# src/voice_daemon.py through THIS venv. Decouples UI deps from runtime deps.
+bold "Step 7: Runtime venv"
+RUNTIME_VENV="$BOOTH_HOME/.venv"
 PY=$(brew --prefix python@3.12)/bin/python3.12
+if [ ! -d "$RUNTIME_VENV" ]; then
+  "$PY" -m venv "$RUNTIME_VENV"
+fi
+"$RUNTIME_VENV/bin/python" -m pip install --upgrade pip wheel >/dev/null
+"$RUNTIME_VENV/bin/python" -m pip install kokoro-onnx onnxruntime numpy
+ok "Runtime venv at $RUNTIME_VENV"
+
+# ── 8. Build the .app bundle
+bold "Step 8: Build Booth.app"
+cd "$PROJECT_DIR/app"
 
 if [ ! -d ".venv" ]; then
   "$PY" -m venv .venv
@@ -121,7 +134,7 @@ else
 fi
 
 # ── 8. Hotkey daemon (skhd) — optional, for Cmd+Option+P toggle
-bold "Step 8: Hotkey (skhd, optional)"
+bold "Step 9: Hotkey (skhd, optional)"
 if command -v skhd >/dev/null 2>&1; then
   ok "skhd already installed"
 else

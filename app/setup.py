@@ -35,6 +35,12 @@ OPTIONS = {
         "LSUIElement": True,
         "NSHumanReadableCopyright": "MIT",
     },
+    # The bundled python only needs rumps (the menu-bar UI library). The
+    # heavy runtime deps (kokoro_onnx, onnxruntime, numpy) live in a separate
+    # user venv at ~/.local/share/booth/.venv that install.sh creates. main.py
+    # subprocesses listen.py and voice_daemon.py through that venv's python,
+    # which keeps the .app bundle small and avoids the transitive-dep hell of
+    # py2app trying to follow numpy/onnxruntime native chains.
     "packages": ["rumps"],
     "resources": ["menubarTemplate.png"] + RESOURCE_SRC_COPIES,
 }

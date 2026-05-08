@@ -25,11 +25,12 @@ LISTEN_LOG = BOOTH_HOME / "listen.log"
 DAEMON_LOG = BOOTH_HOME / "voice_daemon.log"
 DAEMON_SOCKET = Path("/tmp/booth_voice.sock")
 
-# Resolve src/ both in dev (alongside app/) and in the bundled .app
+# Resolve src/ both in dev (alongside app/) and in the bundled .app.
+# In the bundle py2app copies the source files directly into Resources/, not
+# into a src/ subfolder, so "bundled src" is just the same dir as main.py.
 HERE = Path(__file__).resolve().parent
 SRC_DEV = HERE.parent / "src"
-SRC_BUNDLED = HERE.parent / "Resources" / "src"
-SRC_DIR = SRC_DEV if SRC_DEV.exists() else SRC_BUNDLED
+SRC_DIR = SRC_DEV if SRC_DEV.exists() else HERE
 
 
 def daemon_alive() -> bool:
@@ -84,12 +85,21 @@ class App(rumps.App):
         if self.listener_proc and self.listener_proc.poll() is None:
             return
         py = self._python_for_subprocess()
-        env = os.environ.copy()
-        env["PYTHONPATH"] = str(SRC_DIR.parent)
+        # The .app inherits a polluted env from py2app's launcher (DYLD_*,
+        # PYTHONPATH, PYTHONHOME) that breaks the runtime venv's openssl
+        # lookup ("unknown url type: https"). Start the subprocess from a
+        # MINIMAL env — let the venv python resolve its own paths cleanly.
+        env = {
+            "HOME": str(HOME),
+            "PATH": "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+            "BOOTH_HOME": str(BOOTH_HOME),
+            "LANG": os.environ.get("LANG", "en_US.UTF-8"),
+        }
+        listen_err = open(BOOTH_HOME / "listen.stderr.log", "ab", buffering=0)
         self.listener_proc = subprocess.Popen(
             [py, str(SRC_DIR / "listen.py")],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=listen_err,
+            stderr=listen_err,
             env=env,
             start_new_session=True,
         )
@@ -109,8 +119,14 @@ class App(rumps.App):
         self.listener_proc = None
 
     def _python_for_subprocess(self) -> str:
-        # In a py2app bundle, sys.executable points to the app's python.
-        # In dev, fall back to whatever python the user has.
+        # Prefer the user-runtime venv that install.sh creates at
+        # ~/.local/share/booth/.venv — it has kokoro_onnx, onnxruntime, numpy
+        # for the heavy synth + STT pipeline. The .app's bundled python only
+        # has rumps, so we can't use it here.
+        venv_py = BOOTH_HOME / ".venv" / "bin" / "python"
+        if venv_py.exists():
+            return str(venv_py)
+        # Dev fallback
         import sys
         return sys.executable
 
