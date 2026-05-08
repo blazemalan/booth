@@ -68,9 +68,9 @@ Your agent is the orchestrator: it receives the inbound message via the MCP, dow
 
 `Booth.app` is built with py2app, and its bundled python only carries what the menu-bar UI needs (rumps). The TTS pipeline needs kokoro_onnx + onnxruntime + numpy, which are heavy and have native extensions that py2app can't always bundle cleanly.
 
-So `install.sh` creates `~/.local/share/booth/.venv` against the user's Homebrew Python and installs the runtime deps there. The menu-bar app subprocess-launches the voice daemon through that venv's python. The .app stays small; the heavy stuff lives in the venv.
+So `install.sh` creates `~/.local/share/booth/.venv` against the user's Homebrew Python and installs the runtime deps there. Both the menu-bar app and the `bin/booth` CLI subprocess-launch the voice daemon through that venv's python (the CLI defaults to it; the menu-bar app's `_python_for_subprocess` looks for it explicitly). The .app stays small; the heavy stuff lives in the venv.
 
-This is also why `bin/booth` accepts a `BOOTH_PY` env var — point it at the venv if you're calling Booth from your own scripts.
+If you need to override which Python `bin/booth` uses — running against a custom kokoro_onnx fork, debugging in a different venv — set the `BOOTH_PY` env var to that python's path.
 
 ## The daemon
 
