@@ -1,19 +1,23 @@
 #!/bin/bash
-# pager — convenience CLI wrapping src/say.py, src/listen.py, src/stt.py.
+# booth — voice on-ramp + off-ramp for an MCP-bridged Telegram channel.
+#
+# Booth doesn't bridge Telegram itself — that's the MCP plugin's job (Anthropic's
+# Telegram channel, OpenClaw's Telegram skill, etc.). Booth is the voice layer
+# that drops in alongside whichever bridge you already run.
 #
 # Usage:
-#   pager say "Hello, Blaze."
-#   pager say --voice af_bella "Custom voice."
-#   pager listen                          # start the inbound listener (foreground)
-#   pager stt path/to/audio.oga           # transcribe a file
-#   pager inject "/compact"               # type into front Terminal session
-#   pager status                          # daemon + listener health
+#   booth say "Hello, Blaze."          # synth + sendVoice via Telegram Bot API
+#   booth say --voice af_bella "..."   # custom voice
+#   booth transcribe path/audio.oga    # whisper.cpp → text on stdout
+#   booth inject "/compact"            # AppleScript-type into front Terminal
+#   booth daemon                       # foreground voice daemon (debug only)
+#   booth status                       # daemon health
 
 set -e
 
-PAGER_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
-SRC_DIR="$PAGER_DIR/src"
-PY="${PAGER_PY:-python3}"
+BOOTH_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+SRC_DIR="$BOOTH_DIR/src"
+PY="${BOOTH_PY:-python3}"
 
 cmd="${1:-help}"
 shift || true
@@ -22,10 +26,7 @@ case "$cmd" in
   say)
     exec "$PY" "$SRC_DIR/say.py" "$@"
     ;;
-  listen)
-    exec "$PY" "$SRC_DIR/listen.py" "$@"
-    ;;
-  stt)
+  transcribe|stt)
     exec "$PY" "$SRC_DIR/stt.py" "$@"
     ;;
   inject)
@@ -35,31 +36,25 @@ case "$cmd" in
     exec "$PY" "$SRC_DIR/voice_daemon.py" "$@"
     ;;
   status)
-    if [ -S /tmp/pager_voice.sock ]; then
+    if [ -S /tmp/booth_voice.sock ]; then
       echo "voice daemon: running (socket present)"
     else
-      echo "voice daemon: not running"
-    fi
-    if pgrep -f "src/listen.py" >/dev/null; then
-      echo "listener:     running"
-    else
-      echo "listener:     not running"
+      echo "voice daemon: not running (will auto-spawn on first 'booth say')"
     fi
     ;;
   help|--help|-h|"")
-    echo "Pager — voice notes from your AI agent, over Telegram."
+    echo "Booth — voice layer for your MCP-bridged Telegram channel."
     echo
     echo "Commands:"
-    echo "  pager say TEXT          send a Telegram voice bubble"
-    echo "  pager listen            start the inbound voice listener"
-    echo "  pager stt FILE          transcribe an audio file"
-    echo "  pager inject TEXT       type into front Terminal session (Claude Code)"
-    echo "  pager daemon            run the TTS daemon manually"
-    echo "  pager status            check daemon + listener state"
+    echo "  booth say TEXT             send a Telegram voice bubble"
+    echo "  booth transcribe FILE      whisper transcript of an audio file"
+    echo "  booth inject TEXT          type into front Terminal session (Claude Code)"
+    echo "  booth daemon               run the TTS daemon manually"
+    echo "  booth status               check daemon health"
     ;;
   *)
     echo "Unknown command: $cmd" >&2
-    echo "Try: pager help" >&2
+    echo "Try: booth help" >&2
     exit 1
     ;;
 esac

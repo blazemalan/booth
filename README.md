@@ -4,15 +4,15 @@
 
 # Booth
 
-> Voice notes from your local AI agent, over Telegram.
+> The voice layer for your AI agent on Telegram.
 
-There are already a dozen Telegram bridges for AI coding agents. Every one of them ships **text only**.
+There are already a dozen Telegram bridges for AI coding agents. Every one of them ships **text only**. Booth doesn't try to be another bridge — it drops in alongside whichever one you already use and adds **voice** on both sides.
 
-Booth ships **voice**. Your agent sends you proper voice bubbles. You reply with voice notes. Local TTS. Local STT. No API keys. No cloud bills. Mac menu-bar app, free forever.
+Local TTS. Local STT. No API keys. No cloud bills. Mac menu-bar app, free forever.
 
-## Why this exists
+## How it fits
 
-The "talk to your AI agent over Telegram" space is real and getting bigger:
+You probably already have a Telegram bridge wired into your agent:
 
 - [Claude Code Channels](https://github.com/anthropics/claude-plugins-official) — Anthropic's official MCP plugin
 - [OpenClaw Telegram skill](https://docs.openclaw.ai/channels/telegram) — 8.3k+ installs
@@ -20,38 +20,39 @@ The "talk to your AI agent over Telegram" space is real and getting bigger:
 - [TeleCodex](https://github.com/benedict2310/telecodex) — Codex CLI bridge
 - [Composio's Telegram MCP](https://composio.dev/toolkits/telegram) — generic agent bridge
 
-These all give you text. They're great. We use Claude Code Channels ourselves — it's how we built Booth in the first place.
+These all do the same job well: they pipe text between Telegram and your local agent. Booth doesn't compete with them — Booth gives them voice.
 
-But text on its own is cold. When your AI sends you a 200-word status update at 3pm and you're in a meeting, you read it later. When your AI sends you a **voice note**, you hear it. You hear the urgency. You hear the personality. The bandwidth is different.
+```
+[your phone]                                 [your Mac]
+                                                   │
+text msg ──► your bridge ────────► your agent ◄──┤
+                                                   │
+voice note ►► your bridge ──► booth transcribe ──►│
+                                                   │
+                          your agent ──► booth say ──► sendVoice ──► your phone
+```
 
-Booth is the voice layer. It drops in alongside whatever bridge you already use, or runs standalone with its own thin Telegram bot poller. Your agent calls a local script with text; Booth synthesizes locally and ships a real voice bubble to your phone. You record a voice note back; Booth transcribes it locally and hands the text to your agent.
-
-That's the whole product.
+Your bridge handles the chat. Booth handles voice on both ends. They share a bot, but Booth never polls `getUpdates`, so there's no conflict.
 
 ## What it does
 
-- **Outbound voice:** your agent calls `booth say "..."`. Booth synthesizes the audio locally with [Kokoro-onnx](https://github.com/thewh1teagle/kokoro-onnx) on the Apple Neural Engine, encodes Opus, sends it to your Telegram bot. Your phone buzzes with a voice bubble in ~2.5 seconds.
-- **Inbound voice:** when you send your bot a voice note, Booth downloads it, transcribes it locally with [whisper.cpp](https://github.com/ggerganov/whisper.cpp), and writes the text where your agent will pick it up.
-- **Self-trigger (Claude Code only):** Booth ships an AppleScript helper your agent can call to send slash commands like `/compact` to its own terminal session — useful when you're not at the keyboard.
+- **Outbound voice:** your agent calls `booth say "..."`. Booth synthesizes locally with [Kokoro-onnx](https://github.com/thewh1teagle/kokoro-onnx) on the Apple Neural Engine, encodes Opus, posts to Telegram's `sendVoice`. Your phone buzzes with a real voice bubble in ~2.5 seconds.
+- **Inbound transcription:** when your bridge delivers a voice note (with the audio file path), your agent calls `booth transcribe path.oga` and gets the text from [whisper.cpp](https://github.com/ggerganov/whisper.cpp). Local, fast, free.
+- **Self-trigger (Claude Code only):** `booth inject "/compact"` AppleScripts the slash command into your front Terminal session — useful when you're not at the keyboard but your agent's running long.
 
 ## Why Telegram (and not iMessage)
 
-We picked Telegram because Telegram has a real Bot API: clean voice-bubble support, two-way without sandbox fights, free for everyone. iMessage is downgraded in three places that actually matter:
+Telegram has a real Bot API with first-class voice-bubble support and a clean `sendVoice` endpoint. iMessage doesn't:
 
-- **No native voice bubble for bots.** AppleScript can send an audio attachment, but recipients see "play this audio file," not a proper waveform voice bubble.
-- **No inbound API.** Receiving an iMessage programmatically means polling SQLite or wrestling with AppleScript event handlers. Brittle and slow.
-- **macOS TCC sandboxing** keeps blocking automation paths Apple used to allow. Every macOS update is a new fight.
+- No native voice bubble for bots. AppleScript sends an audio attachment, which arrives as "tap to play this file," not the proper waveform voice bubble.
+- No inbound API. Receiving an iMessage programmatically means polling SQLite or wrestling with AppleScript event handlers. Brittle and slow.
+- macOS TCC sandboxing keeps blocking automation paths Apple used to allow. Every macOS update is a new fight.
 
-We may add an iMessage adapter later (it's on the roadmap) but the experience will be a downgrade. Telegram is the intended channel.
+We may add an iMessage adapter later, but the experience will be a downgrade. Telegram is the intended channel.
 
 ## Who it's for
 
-People running an always-on AI coding agent locally — Claude Code, Codex CLI, OpenClaw, custom Python — who want to actually *talk* to it from their phone.
-
-## Hotkey
-
-- **Cmd + Option + P** — toggle Booth listening on/off
-- Menu bar icon shows status: green pulse = listening, red = paused, gray = stopped
+People running an always-on AI coding agent locally — Claude Code, Codex CLI, OpenClaw, custom Python — who already have a Telegram bridge and want to actually *talk* to their agent from anywhere.
 
 ## Install
 
@@ -65,16 +66,14 @@ The installer:
 
 - Downloads Kokoro TTS models (~196 MB) to `~/.local/share/kokoro-tts/`
 - Downloads Whisper.cpp base model (~150 MB) to `~/.local/share/whisper/`
-- Builds the `.app` bundle with `py2app`
-- Copies it to `/Applications/Booth.app`
-- Installs `opus-tools` and `whisper-cpp` via Homebrew if missing
+- Creates a runtime venv at `~/.local/share/booth/.venv` with the synth + STT deps
+- Builds `Booth.app` and copies it to `/Applications/`
 - Asks for your Telegram bot token (one-time)
-- Wires the menu-bar app and starts the listener
 
 You'll need a Telegram bot token. Two paths:
 
-- **Already have a bot?** Skip ahead — paste your token when asked.
-- **Don't have one?** Five-minute setup walkthrough in [docs/BOT_SETUP.md](docs/BOT_SETUP.md). Then run install.
+- **Already have a bot wired into your bridge?** Use the same token — Booth doesn't poll `getUpdates`, so no conflict.
+- **Don't have one yet?** [Five-minute walkthrough in `docs/BOT_SETUP.md`](docs/BOT_SETUP.md).
 
 ## System requirements
 
@@ -82,35 +81,15 @@ You'll need a Telegram bot token. Two paths:
 - **macOS:** 13.0 (Ventura) or newer.
 - **RAM:** 8 GB minimum, 16 GB recommended.
 - **Disk:** ~1 GB free (models + app bundle).
-- **Permissions:** Accessibility (for the hotkey + the AppleScript self-trigger trick).
-
-## How it works
-
-```
-Your AI agent  →  booth say "..."  →  Kokoro TTS  →  Opus encode
-                                                          ↓
-                                              Telegram sendVoice
-                                                          ↓
-                                                   your phone 📱
-
-your phone 🎤  →  Telegram bot getUpdates  →  download .ogg
-                                                  ↓
-                                          afconvert → wav
-                                                  ↓
-                                          whisper.cpp → text
-                                                  ↓
-                                            your AI agent
-```
-
-All synthesis and transcription happen on your Mac. The only network traffic is to Telegram's servers. Your conversations never touch any AI vendor's API.
+- **Permissions:** Accessibility (for `booth inject`).
 
 ## Voices
 
-Kokoro ships 50+ voices, graded A through F by the model author based on training data quality. Booth defaults to `af_heart` — the only A-grade voice in the roster. Swap voices via the menu-bar settings.
+Kokoro ships 50+ voices, graded A through F by the model author. Booth defaults to `af_heart` — the only A-grade voice in the roster. Swap with `--voice af_bella` etc.
 
 ## Compatibility
 
-| Agent | Outbound voice | Inbound voice | Self-trigger (`/compact`) |
+| Agent | `booth say` | `booth transcribe` | `booth inject` |
 |-----|-----|-----|-----|
 | Claude Code | ✅ | ✅ | ✅ |
 | Codex CLI | ✅ | ✅ | ✅ |
@@ -118,18 +97,16 @@ Kokoro ships 50+ voices, graded A through F by the model author based on trainin
 | Custom Python/CLI agent | ✅ | ✅ | ⚠️ (terminal-based only) |
 | Cloud-only bots (ChatGPT web, Claude.ai) | ❌ | ❌ | ❌ |
 
-If your agent runs locally and can shell out to a script, Booth works. The self-trigger trick is specific to terminal-based agents that read keyboard input.
-
-> **IDE-based agents** (Cursor, Aider) work for one-shot voice exchanges if you script them, but they're session-based, not always-on, so they're not Booth's primary use case.
+If your agent runs locally and can shell out to a script, Booth works. The inject trick is specific to terminal-based agents that read keyboard input.
 
 ## Roadmap
 
-- **v0.1** *(you're here)*: outbound voice + inbound voice + self-trigger, Mac only
+- **v0.1** *(you're here)*: voice on/off ramps + self-trigger, Mac only
 - **v0.2:** per-conversation voice profiles, idle-eviction tuning, log viewer in menu bar
 - **v0.3:** optional iMessage adapter (downgraded UX, see "Why Telegram" above)
 - **v0.4:** optional Slack/Discord adapters
 
-Linux and Windows ports are not on our roadmap. Fork and adapt if you need them — the core (Python + Kokoro + Whisper) is portable; the menu-bar UI and CoreML acceleration are the Mac-specific parts.
+Linux and Windows ports are not on our roadmap. Fork and adapt if you need them — the core is portable; the menu-bar UI and CoreML acceleration are the Mac-specific parts.
 
 ## Need help wiring this for your business?
 

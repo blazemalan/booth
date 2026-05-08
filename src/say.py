@@ -9,7 +9,7 @@ Usage:
     python -m booth.say --dry-run "Test the synth without sending."
 
 Reads bot token from $BOOTH_HOME/telegram_bot_token (default: ~/.local/share/booth/).
-Defaults the chat_id to the first entry in $BOOTH_HOME/allowlist.
+Defaults the chat_id to the first entry in $BOOTH_HOME/chat_ids (one chat ID per line).
 
 Auto-spawns the voice daemon if the socket isn't there.
 """
@@ -29,7 +29,7 @@ from pathlib import Path
 HOME = Path.home()
 BOOTH_HOME = Path(os.environ.get("BOOTH_HOME", HOME / ".local/share/booth"))
 TOKEN_FILE = BOOTH_HOME / "telegram_bot_token"
-ALLOWLIST_FILE = BOOTH_HOME / "allowlist"
+CHAT_IDS_FILE = BOOTH_HOME / "chat_ids"
 
 DAEMON_SOCKET = Path("/tmp/booth_voice.sock")
 DAEMON_SCRIPT = Path(__file__).parent / "voice_daemon.py"
@@ -46,11 +46,15 @@ def load_bot_token() -> str:
 
 
 def load_default_chat_id() -> str:
-    if not ALLOWLIST_FILE.exists():
-        raise SystemExit(f"No allowlist at {ALLOWLIST_FILE}. Pass --chat-id explicitly.")
-    chats = [line.strip() for line in ALLOWLIST_FILE.read_text().splitlines() if line.strip()]
+    if not CHAT_IDS_FILE.exists():
+        raise SystemExit(
+            f"No default chat configured at {CHAT_IDS_FILE}. "
+            "Add one with: echo 'YOUR_CHAT_ID' >> "
+            f"{CHAT_IDS_FILE}\nOr pass --chat-id explicitly."
+        )
+    chats = [line.strip() for line in CHAT_IDS_FILE.read_text().splitlines() if line.strip()]
     if not chats:
-        raise SystemExit("Empty allowlist. Pass --chat-id.")
+        raise SystemExit(f"Empty {CHAT_IDS_FILE}. Pass --chat-id.")
     return chats[0]
 
 
@@ -150,7 +154,7 @@ def main():
     ap.add_argument("--text", dest="text_flag", help="text to speak")
     ap.add_argument("--voice", default=DEFAULT_VOICE, help=f"Kokoro voice id (default: {DEFAULT_VOICE})")
     ap.add_argument("--speed", type=float, default=1.0)
-    ap.add_argument("--chat-id", help="Telegram chat ID (defaults to first allowlist entry)")
+    ap.add_argument("--chat-id", help="Telegram chat ID (defaults to first entry in $BOOTH_HOME/chat_ids)")
     ap.add_argument("--caption", help="optional caption shown next to the voice bubble")
     ap.add_argument("--keep", action="store_true", help="keep intermediate files")
     ap.add_argument("--dry-run", action="store_true",

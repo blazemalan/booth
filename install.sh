@@ -17,7 +17,7 @@ WHISPER_DIR="$HOME/.local/share/whisper"
 BOOTH_HOME="$HOME/.local/share/booth"
 APP_DEST="/Applications/Booth.app"
 TOKEN_FILE="$BOOTH_HOME/telegram_bot_token"
-CHAT_FILE="$BOOTH_HOME/allowlist"
+CHAT_IDS_FILE="$BOOTH_HOME/chat_ids"
 
 bold() { printf "\033[1m%s\033[0m\n" "$*"; }
 ok()   { printf "\033[32m[ok]\033[0m %s\n" "$*"; }
@@ -100,8 +100,8 @@ fi
 
 # ── 7. Runtime venv at $BOOTH_HOME/.venv
 # This venv holds kokoro_onnx + onnxruntime + numpy. Booth.app's bundled python
-# only has rumps; the menu-bar app subprocess-launches src/listen.py and
-# src/voice_daemon.py through THIS venv. Decouples UI deps from runtime deps.
+# only has rumps; the menu-bar app subprocess-launches src/voice_daemon.py
+# through THIS venv. Decouples UI deps from runtime deps.
 bold "Step 7: Runtime venv"
 RUNTIME_VENV="$BOOTH_HOME/.venv"
 PY=$(brew --prefix python@3.12)/bin/python3.12
@@ -149,14 +149,19 @@ echo
 bold "Done."
 echo
 echo "Next steps:"
-echo "  1. Open Booth.app from /Applications — it'll start the listener and idle in your menu bar"
-echo "  2. Pair your Telegram bot: open it on your phone and send /start"
-echo "  3. Add your chat ID to the allowlist (see docs/BOT_SETUP.md step 3)"
-echo "  4. Test outbound: $PROJECT_DIR/bin/booth say 'Hello, world.'"
-echo "  5. Test inbound: send a voice note to your bot from Telegram"
+echo "  1. Open Booth.app from /Applications — it idles in your menu bar and"
+echo "     keeps the voice daemon warm so synth is fast on every call."
+echo "  2. Set the default Telegram chat: echo 'YOUR_CHAT_ID' >> $CHAT_IDS_FILE"
+echo "     (see docs/BOT_SETUP.md to find your chat_id)"
+echo "  3. Test outbound: $PROJECT_DIR/bin/booth say 'Hello, world.'"
+echo "  4. Wire your AI agent to call 'booth say \"...\"' for voice replies, and"
+echo "     'booth transcribe <audio.oga>' when your Telegram MCP delivers a"
+echo "     voice note. Booth doesn't bridge Telegram itself — your existing"
+echo "     MCP plugin keeps doing that. Booth is the voice layer on top."
 echo
 echo "Troubleshooting:"
-echo "  - logs: $BOOTH_HOME/booth.log"
+echo "  - daemon log: $BOOTH_HOME/voice_daemon.log"
+echo "  - daemon stderr: $BOOTH_HOME/daemon.stderr.log"
 echo "  - bot token: $TOKEN_FILE"
 echo "  - models: $KOKORO_DIR, $WHISPER_DIR"
 echo
