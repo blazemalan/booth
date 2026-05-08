@@ -14,9 +14,9 @@ Local TTS. Local STT. No API keys. No cloud bills. Mac menu-bar app, free foreve
 
 If you have an AI coding agent on this Mac (Claude Code, Codex CLI, OpenClaw, custom), tell it to install Booth for you. Paste this into your agent and it'll handle the rest:
 
-> **Install Booth for me.** Repo: `https://github.com/blazemalan/booth`. Clone it, run `./install.sh`, then drop my Telegram bot token at `~/.local/share/booth/telegram_bot_token` (mode 600). When you're done, ask me where I'd like the `booth.md` voice protocol file to live so you can re-read it on every incoming voice message — Claude Code users typically import it from `~/.claude/CLAUDE.md`; Codex and others have their own conventions, pick whatever works.
+> **Install Booth for me.** Repo: `https://github.com/blazemalan/booth`. Clone it, run `./install.sh`, then drop my Telegram bot token at `~/.local/share/booth/telegram_bot_token` (mode 600) and my default chat ID at `~/.local/share/booth/chat_ids` (one per line). After that, wire the `booth.md` voice protocol file so you re-read it on every incoming voice message. If you're Claude Code, just run `scripts/install_claude_hook.sh` — it sets up the UserPromptSubmit hook automatically. Codex CLI / OpenClaw / custom agents: import `~/.local/share/booth/booth.md` however your system handles agent context. Verify the install worked with `bin/booth say "hello"` (synthesizes + sends a real voice bubble) before reporting success.
 
-The agent reads the README, runs the installer, asks where you'd like the protocol file to live, and you're done in about five minutes.
+The agent reads the README, runs the installer, wires the hook, sends a verification voice message, and you're done in about five minutes.
 
 If you'd rather install by hand, jump to [Manual install](#manual-install) below.
 
