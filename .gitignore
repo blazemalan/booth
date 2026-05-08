@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Build artifacts
+app/build/
+app/dist/
+*.app/
+
+# Mac
+.DS_Store
+
+# Logs / runtime
+*.log
+/tmp/pager_voice.sock
+/tmp/pager_voice.pid
+
+# Local config (never committed — these belong in $PAGER_HOME)
+telegram_bot_token
+allowlist
+inbox.jsonl
+
+# Editor
+.vscode/
+.idea/

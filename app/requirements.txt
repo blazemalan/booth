@@ -1,0 +1,5 @@
+kokoro-onnx>=0.4.0
+onnxruntime>=1.20.0
+numpy>=1.26.0
+rumps>=0.4.0
+py2app>=0.28.0
