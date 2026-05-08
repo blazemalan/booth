@@ -10,6 +10,12 @@ There are already a dozen Telegram bridges for AI coding agents. Every one of th
 
 Local TTS. Local STT. No API keys. No cloud bills. Mac menu-bar app, free forever.
 
+<p align="center">
+  <img src="docs/screenshots/telegram-chat-example.jpg" alt="Booth voice messages in a Telegram chat with an AI agent" width="320" />
+  <br/>
+  <em>What it actually looks like — voice notes back and forth with your agent, on the phone you already have.</em>
+</p>
+
 ## Prerequisites
 
 Booth is the voice layer **on top of** an existing Telegram bridge — it doesn't bridge Telegram itself. Before installing Booth you need:
