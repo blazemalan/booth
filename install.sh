@@ -98,22 +98,49 @@ else
   ok "Token already configured at $TOKEN_FILE"
 fi
 
-# ── 7. Build the .app bundle (TODO: py2app config in app/setup.py)
+# ── 7. Build the .app bundle
 bold "Step 7: Build Pager.app"
-warn "App bundle build is not wired yet — running in CLI mode for now."
-warn "TODO: cd $PROJECT_DIR/app && python -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/python setup.py py2app"
+cd "$PROJECT_DIR/app"
+PY=$(brew --prefix python@3.12)/bin/python3.12
 
-# ── 8. Hotkey daemon (skhd) + Accessibility prompt (TODO)
-bold "Step 8: Hotkey daemon"
-warn "skhd integration coming soon. For now, run the daemon manually with: bin/pager-daemon"
+if [ ! -d ".venv" ]; then
+  "$PY" -m venv .venv
+fi
+.venv/bin/python -m pip install --upgrade pip wheel >/dev/null
+.venv/bin/python -m pip install -r requirements.txt
+
+# Standalone build for distribution; alias build (-A) is faster for dev.
+.venv/bin/python setup.py py2app
+
+if [ -d "dist/Pager.app" ]; then
+  rm -rf "$APP_DEST"
+  cp -R "dist/Pager.app" "$APP_DEST"
+  ok "Pager.app installed to $APP_DEST"
+else
+  warn "py2app build did not produce dist/Pager.app — check the output above."
+fi
+
+# ── 8. Hotkey daemon (skhd) — optional, for Cmd+Option+P toggle
+bold "Step 8: Hotkey (skhd, optional)"
+if command -v skhd >/dev/null 2>&1; then
+  ok "skhd already installed"
+else
+  echo "Skipping skhd install. To enable Cmd+Option+P toggle later:"
+  echo "  brew install koekeishiya/formulae/skhd"
+  echo "  Then add to ~/.config/skhd/skhdrc:"
+  echo "    cmd + alt - p : open -a Pager"
+  echo "  And run: skhd --start-service"
+fi
 
 echo
-bold "Done. (mostly)"
+bold "Done."
 echo
 echo "Next steps:"
-echo "  1. Pair your Telegram bot: open it on your phone and send /start"
-echo "  2. Run: $PROJECT_DIR/bin/pager say 'Hello, world.' to test outbound voice"
-echo "  3. Send a voice note to your bot from Telegram to test inbound STT"
+echo "  1. Open Pager.app from /Applications — it'll start the listener and idle in your menu bar"
+echo "  2. Pair your Telegram bot: open it on your phone and send /start"
+echo "  3. Add your chat ID to the allowlist (see docs/BOT_SETUP.md step 3)"
+echo "  4. Test outbound: $PROJECT_DIR/bin/pager say 'Hello, world.'"
+echo "  5. Test inbound: send a voice note to your bot from Telegram"
 echo
 echo "Troubleshooting:"
 echo "  - logs: $PAGER_HOME/pager.log"

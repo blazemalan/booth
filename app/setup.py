@@ -1,0 +1,47 @@
+"""py2app build config for Pager.app.
+
+Build:
+    cd app
+    python -m pip install py2app
+    python setup.py py2app -A     # alias mode (fast, dev)
+    python setup.py py2app        # standalone (slower, distributable)
+
+The standalone build copies ../src/ into the bundle's Resources/ so the
+menu-bar app can find listen.py + voice_daemon.py at runtime.
+"""
+import shutil
+from pathlib import Path
+from setuptools import setup
+
+APP = ["main.py"]
+
+# Bundle the entire src/ tree as a Resources subfolder so the .app can
+# subprocess-launch listen.py / voice_daemon.py / say.py from anywhere.
+HERE = Path(__file__).resolve().parent
+SRC_PARENT = HERE.parent / "src"
+RESOURCE_SRC_COPIES: list[str] = []
+if SRC_PARENT.exists():
+    for f in sorted(SRC_PARENT.glob("*.py")):
+        RESOURCE_SRC_COPIES.append(str(f))
+
+OPTIONS = {
+    "iconfile": "icon.icns",
+    "plist": {
+        "CFBundleName": "Pager",
+        "CFBundleDisplayName": "Pager",
+        "CFBundleIdentifier": "io.github.blazemalan.pager",
+        "CFBundleVersion": "0.1.0",
+        "CFBundleShortVersionString": "0.1.0",
+        "LSUIElement": True,
+        "NSHumanReadableCopyright": "MIT",
+    },
+    "packages": ["rumps"],
+    "resources": ["menubarTemplate.png"] + RESOURCE_SRC_COPIES,
+}
+
+setup(
+    app=APP,
+    name="Pager",
+    options={"py2app": OPTIONS},
+    setup_requires=["py2app"],
+)
