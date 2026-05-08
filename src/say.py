@@ -71,7 +71,12 @@ def daemon_alive() -> bool:
 
 
 def spawn_daemon() -> None:
-    py = sys.executable
+    # Prefer the runtime venv python (has kokoro_onnx + onnxruntime + numpy).
+    # sys.executable might be system python3 if invoked via bin/booth before
+    # the venv is populated, in which case the daemon would fail to import
+    # kokoro_onnx and never bind the socket.
+    venv_py = BOOTH_HOME / ".venv" / "bin" / "python"
+    py = str(venv_py) if venv_py.exists() else sys.executable
     subprocess.Popen(
         [py, str(DAEMON_SCRIPT)],
         stdout=subprocess.DEVNULL,

@@ -17,7 +17,17 @@ set -e
 
 BOOTH_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 SRC_DIR="$BOOTH_DIR/src"
-PY="${BOOTH_PY:-python3}"
+# Prefer the runtime venv that install.sh creates (kokoro_onnx + onnxruntime
+# + numpy live there). Fall back to system python3 if the venv isn't set up
+# yet — say/transcribe will still work for daemon-already-running cases.
+RUNTIME_PY="${HOME}/.local/share/booth/.venv/bin/python"
+if [ -n "${BOOTH_PY:-}" ]; then
+  PY="$BOOTH_PY"
+elif [ -x "$RUNTIME_PY" ]; then
+  PY="$RUNTIME_PY"
+else
+  PY="python3"
+fi
 
 cmd="${1:-help}"
 shift || true

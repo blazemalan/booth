@@ -52,9 +52,11 @@ def daemon_alive() -> bool:
 class App(rumps.App):
     def __init__(self):
         icon_path = HERE / "menubarTemplate.png"
+        # rumps shows BOTH title and icon side-by-side when both are set —
+        # leave title empty so the Booth template icon stands alone.
         super().__init__(
             "Booth",
-            title="📟",
+            title="" if icon_path.exists() else "📟",
             icon=str(icon_path) if icon_path.exists() else None,
             template=True,
             quit_button=None,
