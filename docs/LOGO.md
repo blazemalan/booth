@@ -1,40 +1,38 @@
-# Logo direction
+# Logo
 
-> Locked artwork goes in `app/icon.png` (1024×1024) and `app/icon.icns` (multi-resolution Mac bundle).
-> This file is the design brief.
+> Locked artwork lives in `app/icon.png` (1024×1024), `app/icon.icns` (multi-resolution Mac bundle), and `app/menubarTemplate.png` (22×22 monochrome menu-bar glyph).
 
-## Concept
+## Concept (locked 2026-05-08)
 
-Booth is "the radio booth your AI broadcasts from." The icon should evoke: a small vintage broadcast booth, the ON AIR red-light sign, the warmth of analog radio. Not a microphone (we ship to one — we are not one). Not a generic chat bubble.
+A stylized cream radio body with a single bold ember-orange dial dominating the front, holding a clean cream speech bubble with an ember voice waveform inside. A thin antenna rises from the top-right. At the bottom of the body, a small slatted speaker grille reveals subtle ember circuit-board patterns — the AI presence inside the radio.
 
-Cohesive sibling to Claudible: same warm orange background, same illustrated beige/cream rendering style, similar lighting. Reads as "the same author made these two."
+**The single-image read:** "voice / radio / AI-inside" in one composed silhouette. No text, no labels, no extra knobs. Pure iconic geometry.
 
-## Style spec
+This is also the Cinder Works brand mark going forward — the first time the brand has visual identity beyond typography.
 
-- **Format:** 1024×1024 PNG → ICNS pipeline. Rounded square corner radius matching macOS icon norms.
-- **Vibe:** soft illustrated, modern flat with subtle shading. Not pixel art. Not photorealistic.
-- **Background:** warm orange gradient `#ff8c4d` → `#ff6b35` (matches Claudible's bg).
-- **Subject:** a small beige (`#f5e6cc`) vintage broadcast scene. Pick one of:
-  - **Option 1:** An ON AIR rectangular sign with a glowing red dot.
-  - **Option 2:** A retro radio mic on a stand, soft drop shadow.
-  - **Option 3:** A small radio booth window with a person silhouette inside (more illustrative).
-- **Accent light:** a single `#3aff3a` green LED somewhere on the subject — keeps the "live" feel and bridges to Booth's "I am on" indicator semantics in the menu bar.
+## Palette
 
-## Menu bar template (separate file)
+- Background: `#0a0a0a` (cinder.works near-black)
+- Radio body: `#f5e6cc` (warm cream)
+- Dial: `#ff6b35` (cinder.works ember)
+- Speech bubble: `#f5e6cc` (cream)
+- Voice waveform: `#ff6b35` (ember)
+- Circuit pattern: `#ff6b35` glow on `#1a1a1a` recess
+- Antenna: cream with subtle gradient
 
-`app/menubarTemplate.png` — 22×22 black-on-transparent monochrome. macOS auto-inverts in dark mode. The shape: minimal silhouette of the chosen subject. Strict 1px stroke, no fills.
+## Files
 
-## What it should NOT look like
+- `app/icon.png` — 1024×1024 hero PNG
+- `app/icon.icns` — Mac multi-resolution icon bundle (16, 32, 128, 256, 512, 1024 + @2x)
+- `app/menubarTemplate.png` — 22×22 menu-bar glyph (currently full-color scale-down; v0.1 polish: replace with proper black-on-transparent silhouette so macOS auto-inverts in dark mode)
 
-- ❌ A glowing brain
-- ❌ A speech bubble
-- ❌ A waveform
-- ❌ A neural-network node graph
-- ❌ Anything with the word "AI" in the icon
-- ❌ A microphone alone with no booth context (too generic)
+## What it should NOT include
 
-## Reference touchstones
+- ❌ Any text, letters, words, numbers, brand badges
+- ❌ A standalone microphone (reads as a singing app)
+- ❌ Generic AI cliches (brain glyphs, neural-network nodes)
+- ❌ Anything that breaks the cream + ember + black palette
 
-- The classic ON AIR neon/light sign in any film about radio
-- The warm illustrated style of modern macOS dock icons (Mail, Messages, Music)
-- The Claudible icon, for direct sibling-app cohesion
+## Reference origin
+
+Generated 2026-05-08 in iteration v14 (`booth_ultra_minimal.png`) after a long iteration loop with Blaze. The v11 C concept (cream radio + ember dial + speech bubble) was the breakthrough composition; v14 stripped it to its iconic essence.
