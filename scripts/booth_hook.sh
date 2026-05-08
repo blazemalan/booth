@@ -13,14 +13,13 @@ set -e
 BOOTH_HOME="${BOOTH_HOME:-$HOME/.local/share/booth}"
 BOOTH_MD="$BOOTH_HOME/booth.md"
 
-# Read whole stdin
+# Read whole stdin. Claude Code passes a JSON envelope with a "prompt" field
+# (and other metadata). Inside the JSON the channel block's quotes are
+# backslash-escaped, so we match BOTH `attachment_kind="voice"` (raw) and
+# `attachment_kind=\"voice\"` (JSON-escaped). Same for the booth-say heuristic.
 prompt="$(cat)"
 
-# Look for a voice channel block. We match either:
-#   - inbound voice from a Telegram channel block: attachment_kind="voice"
-#   - the agent about to call booth say (heuristic: "booth say" appearing in
-#     the prompt as a tool plan)
-if echo "$prompt" | grep -q 'attachment_kind="voice"' || echo "$prompt" | grep -qE '\bbooth say\b'; then
+if echo "$prompt" | grep -qE 'attachment_kind=\\?"voice\\?"' || echo "$prompt" | grep -qE '\bbooth say\b'; then
   if [ -f "$BOOTH_MD" ]; then
     cat "$BOOTH_MD"
   fi

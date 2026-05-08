@@ -46,12 +46,14 @@ if grep -q "$HOOK_SCRIPT" "$SETTINGS" 2>/dev/null; then
 fi
 
 # Add the hook via jq if available
+# Claude Code expects each entry to be a matcher group: { hooks: [ { type, command } ] }
+# The matcher field is omitted (matches all prompts).
 if command -v jq >/dev/null 2>&1; then
   TMP=$(mktemp)
   jq --arg cmd "$HOOK_SCRIPT" '
     .hooks //= {}
     | .hooks.UserPromptSubmit //= []
-    | .hooks.UserPromptSubmit += [{"command": $cmd}]
+    | .hooks.UserPromptSubmit += [{"hooks": [{"type": "command", "command": $cmd}]}]
   ' "$SETTINGS" > "$TMP"
   mv "$TMP" "$SETTINGS"
   ok "Hook added to $SETTINGS"
@@ -59,7 +61,7 @@ if command -v jq >/dev/null 2>&1; then
 else
   echo "jq not found. Add this manually to $SETTINGS under .hooks.UserPromptSubmit:"
   echo
-  echo "  { \"command\": \"$HOOK_SCRIPT\" }"
+  echo "  { \"hooks\": [ { \"type\": \"command\", \"command\": \"$HOOK_SCRIPT\" } ] }"
   echo
   echo "Or: brew install jq && re-run this script."
 fi
