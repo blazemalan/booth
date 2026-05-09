@@ -3,19 +3,34 @@
 
 Lifecycle:
   - Spawned on demand by `booth say` when the socket isn't there
-  - Listens on $BOOTH_HOME/voice.sock (Unix domain socket, per-instance)
+  - Listens on $TMPDIR/booth_voice.sock (per-user shared)
   - Loads Kokoro once at startup with CoreML+CPU providers (Apple Neural Engine)
   - 30-minute idle timeout: exits cleanly if no requests in 30 min
-  - PID file at $BOOTH_HOME/voice.pid
+  - PID file at $TMPDIR/booth_voice.pid
 
-Multi-instance: every per-agent path is rooted at $BOOTH_HOME (default
-~/.local/share/booth/). Setting BOOTH_HOME=~/.local/share/booth-hans/ in
-another agent's environment gives that agent its own bot token, socket,
-daemon, and logs — no collisions with the default instance.
+Multi-instance design: the daemon is shared across all bots on a Mac.
+It does pure synthesis — text → audio bytes — and has no notion of bot
+identity. Each agent's `booth say` connects to this one daemon for synth,
+then uploads the audio with its own bot token (loaded from $BOOTH_HOME).
+That's why a third bot doesn't cost another 290 MB.
+
+What's per-agent (lives in $BOOTH_HOME, default ~/.local/share/booth/):
+  - telegram_bot_token
+  - chat_ids
+  - booth.md (voice protocol)
+
+What's shared (lives outside $BOOTH_HOME):
+  - daemon socket + PID — at $TMPDIR (per-user)
+  - daemon log — at the default ~/.local/share/booth/voice_daemon.log
+    so a single tail -f catches every synth across every bot
 
 Protocol (newline-delimited JSON):
   request:  {"text": str, "voice": str, "speed": float, "out_wav": str}
   response: {"ok": bool, "samples": int, "sr": int} or {"ok": false, "error": str}
+
+Voice is per-request — Kokoro loads all voices at startup and any synth
+call can pick any of them, so a shared daemon serves Cinder's af_heart
+and Hans's whatever-voice equally well, no conflict.
 """
 from __future__ import annotations
 
@@ -23,16 +38,21 @@ import json
 import os
 import socket
 import sys
+import tempfile
 import threading
 import time
 import wave
 from pathlib import Path
 
 HOME = Path.home()
-BOOTH_HOME = Path(os.environ.get("BOOTH_HOME", HOME / ".local/share/booth"))
-SOCKET_PATH = BOOTH_HOME / "voice.sock"
-PID_PATH = BOOTH_HOME / "voice.pid"
-LOG_PATH = BOOTH_HOME / "voice_daemon.log"
+# Daemon socket + PID live in the per-user temp dir (macOS sets $TMPDIR to
+# something like /var/folders/.../T/ — per-user, world-isolated). Shared
+# across every bot on this Mac so we don't spawn one daemon per bot.
+SOCKET_PATH = Path(tempfile.gettempdir()) / "booth_voice.sock"
+PID_PATH = Path(tempfile.gettempdir()) / "booth_voice.pid"
+# Daemon log always lives at the default Booth state dir, regardless of the
+# caller's BOOTH_HOME — one log for every synth, easy to tail.
+LOG_PATH = HOME / ".local/share/booth/voice_daemon.log"
 KOKORO_MODEL = HOME / ".local/share/kokoro-tts/kokoro-v1.0.fp16.onnx"
 KOKORO_VOICES = HOME / ".local/share/kokoro-tts/voices-v1.0.bin"
 

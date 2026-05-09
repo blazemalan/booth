@@ -146,13 +146,13 @@ You'll need a Telegram bot token. Two paths:
 
 ## Multiple agents on one Mac
 
-Running more than one AI agent that needs voice (e.g. Cinder + Hans + a third)? Each agent should send through its **own** Telegram bot, not share one — otherwise replies all show up in the same chat thread and identities cross-wire.
+Running more than one AI agent that needs voice (e.g. Cinder + Hans + a third)? Each agent sends through its **own** Telegram bot — otherwise replies all show up in the same chat thread and identities cross-wire.
 
-Booth supports this via the `BOOTH_HOME` env var. The default state dir is `~/.local/share/booth/`. Override per-agent and you get parallel installs that share the heavy stuff (Kokoro models, runtime venv, the menu-bar app) but keep tokens, sockets, daemons, and logs separate.
+Booth supports this via the `BOOTH_HOME` env var. The default state dir is `~/.local/share/booth/`. Override per-agent and the agent picks up its own bot token + chat config — but the heavy stuff (Kokoro voice daemon, model files, runtime venv, the menu-bar app) is **shared** across every bot. So bot #2 doesn't cost another ~290 MB of RAM, and bot #3 doesn't either. The daemon does pure text-to-audio synthesis with no notion of bot identity; whichever bot's `booth say` made the call uses its own token to upload the result.
 
 ```bash
 # 1. Make a bot for the second agent in @BotFather, get its token.
-# 2. Spin up the agent's Booth state dir:
+# 2. Spin up the agent's Booth state dir (per-agent identity only):
 mkdir -p ~/.local/share/booth-agent2
 echo "ITS_BOT_TOKEN" > ~/.local/share/booth-agent2/telegram_bot_token
 chmod 600 ~/.local/share/booth-agent2/telegram_bot_token
@@ -170,7 +170,16 @@ Then in the agent's project, set the env var so its `claude` session picks it up
 }
 ```
 
-Now `booth say` from that agent's session sends through *its* bot, lands in *its* thread. The Kokoro daemon, socket, and PID file all live under `$BOOTH_HOME` so the two agents don't fight over `/tmp`. The `.venv` is reused from the default install — no need to duplicate the model deps.
+Now `booth say` from that agent's session sends through *its* bot, lands in *its* thread. The voice daemon socket lives in the per-user temp dir, shared by every Booth client on the Mac.
+
+**What's per-agent (lives in `$BOOTH_HOME`):**
+- `telegram_bot_token`
+- `chat_ids`
+- `booth.md` (voice protocol)
+
+**What's shared (lives outside `$BOOTH_HOME`):**
+- The voice daemon (one process serves every bot)
+- Kokoro TTS models, Whisper STT model, runtime venv, `Booth.app`
 
 ## System requirements
 

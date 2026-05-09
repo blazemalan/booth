@@ -49,19 +49,25 @@ Your agent is the orchestrator: it receives the inbound message via the MCP, dow
 ## State on disk
 
 ```
-~/.local/share/booth/
-├── .venv/                       # runtime venv: kokoro_onnx, onnxruntime, numpy
-├── telegram_bot_token           # 600-mode, plain text
-├── chat_ids                     # newline-separated, first is the say default
-├── voice_daemon.log             # daemon's own log
-└── daemon.stderr.log            # menu-bar app captures the daemon's stderr here
+~/.local/share/booth/                  # default $BOOTH_HOME (per-agent identity)
+├── .venv/                             # runtime venv (shared across agents)
+├── telegram_bot_token                 # 600-mode, plain text — the bot's identity
+├── chat_ids                           # newline-separated, first is the say default
+├── booth.md                           # voice protocol injected by the agent hook
+├── voice_daemon.log                   # one log for every synth across every bot
+└── daemon.stderr.log                  # menu-bar app captures the daemon's stderr
 
-~/.local/share/kokoro-tts/       # Kokoro model files (~196 MB, downloaded by install.sh)
-~/.local/share/whisper/          # Whisper.cpp model files (~150 MB, downloaded by install.sh)
+~/.local/share/booth-<agent>/          # second agent's $BOOTH_HOME (Hans, etc.)
+├── telegram_bot_token                 # *its* bot's identity
+├── chat_ids
+└── booth.md
 
-/tmp/
-├── booth_voice.sock             # daemon's Unix domain socket
-└── booth_voice.pid              # daemon's PID
+~/.local/share/kokoro-tts/             # Kokoro model files (~196 MB)
+~/.local/share/whisper/                # Whisper.cpp model files (~150 MB)
+
+$TMPDIR/                               # per-user, e.g. /var/folders/.../T/
+├── booth_voice.sock                   # ONE daemon socket, shared by every bot
+└── booth_voice.pid                    # the running daemon's PID
 ```
 
 ## Why a separate runtime venv
@@ -76,12 +82,22 @@ If you need to override which Python `bin/booth` uses — running against a cust
 
 `src/voice_daemon.py` keeps Kokoro loaded so synth is fast on every call:
 
-- Listens on `/tmp/booth_voice.sock` (Unix domain socket).
+- Listens on `$TMPDIR/booth_voice.sock` (Unix domain socket, per-user, shared across every bot — see *Multi-bot* below).
 - On startup, monkey-patches `onnxruntime.InferenceSession` to inject `CoreMLExecutionProvider` so Kokoro runs on the Apple Neural Engine.
 - Each request is a newline-delimited JSON message: `{"text": "...", "voice": "af_heart", "speed": 1.0, "out_wav": "/tmp/foo.wav"}`. Response: `{"ok": true, "samples": N, "sr": 24000}`.
 - 30-minute idle timeout: if no requests come in for 30 min, the daemon shuts down cleanly and unlinks its socket. The next `booth say` call auto-respawns it. First synth eats ~3-4s cold-start; warm calls are 0.7-1.0s.
 
 The empty-connection trap: the menu-bar app pings the socket to check if the daemon is alive. The ping opens a connection and immediately closes it without sending data. The daemon needs to recognize that as a probe and not crash on `json.loads("")`. Hence the `if not data.strip(): return` at the top of `handle_client`.
+
+## Multi-bot — one daemon, many agents
+
+Each AI agent on the Mac sends through its own Telegram bot (so chat threads stay separate), but they all share **one** voice daemon. The daemon does pure synthesis — `text + voice → audio bytes` — and has zero notion of bot identity. Whichever bot's `booth say` made the request takes the bytes and uploads them via *its* token.
+
+That's why a third bot doesn't cost another ~290 MB: bot identity (token, chat ids, voice protocol) is the only per-agent thing. It lives at `$BOOTH_HOME/`, defaulting to `~/.local/share/booth/` and overridable per-agent via the env var. Everything else — daemon, models, venv, app — is shared.
+
+The daemon socket and PID file live at `$TMPDIR/booth_voice.sock` and `$TMPDIR/booth_voice.pid`. `$TMPDIR` is a per-user path on macOS (e.g. `/var/folders/.../T/`), so the socket isn't visible to other users on the machine but is shared by every Booth client this user runs.
+
+Voice is per-request — Kokoro loads all 50+ voices at startup and any synth call can pick any of them, so a shared daemon serves Cinder's `af_heart` and Hans's whatever-voice equally well, no conflict.
 
 ## The injector
 

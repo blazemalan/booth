@@ -16,6 +16,7 @@ from __future__ import annotations
 import os
 import socket
 import subprocess
+import tempfile
 import threading
 import time
 from pathlib import Path
@@ -25,9 +26,12 @@ import rumps
 HOME = Path.home()
 BOOTH_HOME = Path(os.environ.get("BOOTH_HOME", HOME / ".local/share/booth"))
 TOKEN_FILE = BOOTH_HOME / "telegram_bot_token"
-DAEMON_LOG = BOOTH_HOME / "voice_daemon.log"
-DAEMON_SOCKET = Path("/tmp/booth_voice.sock")
-DAEMON_STDERR = BOOTH_HOME / "daemon.stderr.log"
+# Daemon socket + PID + log are SHARED across every bot on this Mac (one
+# daemon serves all). They live outside $BOOTH_HOME on purpose — see
+# voice_daemon.py for the per-agent vs shared breakdown.
+DAEMON_SOCKET = Path(tempfile.gettempdir()) / "booth_voice.sock"
+DAEMON_LOG = HOME / ".local/share/booth/voice_daemon.log"
+DAEMON_STDERR = HOME / ".local/share/booth/daemon.stderr.log"
 
 # Resolve src/ both in dev (alongside app/) and in the bundled .app.
 # In the bundle py2app copies the source files directly into Resources/, not

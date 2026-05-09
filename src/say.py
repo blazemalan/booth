@@ -31,10 +31,11 @@ BOOTH_HOME = Path(os.environ.get("BOOTH_HOME", HOME / ".local/share/booth"))
 TOKEN_FILE = BOOTH_HOME / "telegram_bot_token"
 CHAT_IDS_FILE = BOOTH_HOME / "chat_ids"
 
-# Per-instance socket — lives under BOOTH_HOME so two agents (Cinder, Hans, ...)
-# don't fight over a single /tmp socket and accidentally send through each
-# other's bot. The daemon resolves the same path from BOOTH_HOME.
-DAEMON_SOCKET = BOOTH_HOME / "voice.sock"
+# Daemon socket lives in the per-user temp dir, shared across every bot on
+# the Mac. The daemon does pure synthesis — no bot identity in it — so one
+# daemon serves Cinder, Hans, and anyone else. Bot identity (token, chat)
+# stays per-$BOOTH_HOME and is supplied at upload time, not synth time.
+DAEMON_SOCKET = Path(tempfile.gettempdir()) / "booth_voice.sock"
 DAEMON_SCRIPT = Path(__file__).parent / "voice_daemon.py"
 
 DEFAULT_VOICE = "af_heart"
