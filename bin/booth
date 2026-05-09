@@ -15,7 +15,15 @@
 
 set -e
 
-BOOTH_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+# Resolve symlinks so BOOTH_DIR points at the repo even when this script is
+# invoked through $(brew --prefix)/bin/booth or any other symlink hop.
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+BOOTH_DIR="$( cd -P "$( dirname "$SOURCE" )/.." && pwd )"
 SRC_DIR="$BOOTH_DIR/src"
 # Prefer the runtime venv that install.sh creates (kokoro_onnx + onnxruntime
 # + numpy live there). Fall back to system python3 if the venv isn't set up

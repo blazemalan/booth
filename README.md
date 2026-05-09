@@ -44,15 +44,37 @@ Booth is the voice layer **on top of** an existing Telegram bridge — it doesn'
 
 Once your agent receives Telegram messages and can reply with text, you're ready for Booth.
 
-## Install (have an AI agent? paste this)
+## Install
 
-If you have an AI coding agent on this Mac (Claude Code, Codex CLI, OpenClaw, custom), tell it to install Booth for you. Paste this into your agent and it'll handle the rest:
+One line, every Mac:
 
-> **Install Booth for me.** Repo: `https://github.com/blazemalan/booth`. Clone it, run `./install.sh`, then drop my Telegram bot token at `~/.local/share/booth/telegram_bot_token` (mode 600) and my default chat ID at `~/.local/share/booth/chat_ids` (one per line). After that, wire the `booth.md` voice protocol file so you re-read it on every incoming voice message. If you're Claude Code, just run `scripts/install_claude_hook.sh` — it sets up the UserPromptSubmit hook automatically. Codex CLI / OpenClaw / custom agents: import `~/.local/share/booth/booth.md` however your system handles agent context. Verify the install worked with `bin/booth say "hello"` (synthesizes + sends a real voice bubble) before reporting success.
+```bash
+curl -fsSL https://raw.githubusercontent.com/blazemalan/booth/main/install.sh | bash
+```
 
-The agent reads the README, runs the installer, wires the hook, sends a verification voice message, and you're done in about five minutes.
+The installer clones the repo into `~/.local/share/booth/repo`, downloads the Kokoro TTS + Whisper STT models (~320 MB total), builds and installs `Booth.app` to `/Applications/`, drops the `booth` CLI on your PATH at `~/.local/bin/booth`, and prompts you for your Telegram bot token. Five minutes start to finish on a warm internet connection.
 
-If you'd rather install by hand, jump to [Manual install](#manual-install) below.
+After install, open a new terminal so the PATH change takes effect, set your default chat:
+
+```bash
+echo 'YOUR_CHAT_ID' >> ~/.local/share/booth/chat_ids
+```
+
+(see [`docs/BOT_SETUP.md`](docs/BOT_SETUP.md) for finding your chat ID), and verify with:
+
+```bash
+booth say "hello"
+```
+
+You should see a real voice bubble pop up on your phone.
+
+### Have an AI agent? Paste this.
+
+If you have an AI coding agent on this Mac (Claude Code, Codex CLI, OpenClaw, custom), tell it to install Booth for you:
+
+> **Install Booth for me.** Run `curl -fsSL https://raw.githubusercontent.com/blazemalan/booth/main/install.sh | bash`. Then drop my Telegram bot token at `~/.local/share/booth/telegram_bot_token` (mode 600) and my default chat ID at `~/.local/share/booth/chat_ids` (one per line). Wire the `booth.md` voice protocol file so you re-read it on every incoming voice message — if you're Claude Code, run `~/.local/share/booth/repo/scripts/install_claude_hook.sh` to set up the UserPromptSubmit hook automatically. Codex CLI / OpenClaw / custom agents: import `~/.local/share/booth/booth.md` however your system handles agent context. Verify with `booth say "hello"` (synthesizes + sends a real voice bubble) before reporting success.
+
+The agent runs the installer, wires the hook, sends a verification voice message, and you're done.
 
 ## How it fits
 
@@ -100,18 +122,21 @@ People running an always-on AI coding agent locally — Claude Code, Codex CLI, 
 
 ## Manual install
 
+If you'd rather clone the repo yourself instead of piping the installer:
+
 ```bash
 git clone https://github.com/blazemalan/booth.git
 cd booth
 ./install.sh
 ```
 
-The installer:
+Either path runs the same `install.sh`. It:
 
 - Downloads Kokoro TTS models (~196 MB) to `~/.local/share/kokoro-tts/`
 - Downloads Whisper.cpp base model (~150 MB) to `~/.local/share/whisper/`
 - Creates a runtime venv at `~/.local/share/booth/.venv` with the synth + STT deps
 - Builds `Booth.app` and copies it to `/Applications/`
+- Symlinks the `booth` CLI into `~/.local/bin/booth` and adds that dir to your shell PATH if it isn't already
 - Asks for your Telegram bot token (one-time)
 
 You'll need a Telegram bot token. Two paths:

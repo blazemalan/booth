@@ -5,13 +5,36 @@
 # wires the launchd agent, and prompts for a Telegram bot token.
 #
 # Usage:
+#   curl -fsSL https://raw.githubusercontent.com/blazemalan/booth/main/install.sh | bash
+#   # or, from a cloned repo:
 #   ./install.sh
 #
 # Prereqs: Homebrew, macOS 13+. Apple Silicon strongly recommended.
 
 set -e
 
-PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+REPO_URL="https://github.com/blazemalan/booth.git"
+CLONE_DIR="$HOME/.local/share/booth/repo"
+
+# If we were piped from `curl | bash`, BASH_SOURCE won't point at a real file
+# next to a bin/ dir. In that case, clone (or update) the repo to a stable
+# location and re-exec the installer from there.
+SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
+if [ ! -f "$SCRIPT_PATH" ] || [ ! -d "$(dirname "$SCRIPT_PATH")/bin" ]; then
+  command -v git >/dev/null || { echo "git required for curl-pipe install. Install Xcode CLI tools: xcode-select --install" >&2; exit 1; }
+  if [ -d "$CLONE_DIR/.git" ]; then
+    echo "Updating existing booth checkout at $CLONE_DIR..."
+    git -C "$CLONE_DIR" fetch --quiet origin
+    git -C "$CLONE_DIR" reset --hard --quiet origin/main
+  else
+    echo "Cloning booth into $CLONE_DIR..."
+    mkdir -p "$(dirname "$CLONE_DIR")"
+    git clone --quiet "$REPO_URL" "$CLONE_DIR"
+  fi
+  exec bash "$CLONE_DIR/install.sh"
+fi
+
+PROJECT_DIR="$( cd "$( dirname "$SCRIPT_PATH" )" && pwd )"
 KOKORO_DIR="$HOME/.local/share/kokoro-tts"
 WHISPER_DIR="$HOME/.local/share/whisper"
 BOOTH_HOME="$HOME/.local/share/booth"
@@ -116,8 +139,77 @@ fi
 "$RUNTIME_VENV/bin/python" -m pip install kokoro-onnx onnxruntime numpy
 ok "Runtime venv at $RUNTIME_VENV"
 
-# ── 8. Build the .app bundle
-bold "Step 8: Build Booth.app"
+# ── 8. Install booth CLI on PATH
+# Symlink bin/booth into ~/.local/bin (XDG user-local convention — same dir
+# pipx, uv, rustup, and most modern Mac/Linux CLIs use). If ~/.local/bin
+# isn't on PATH, append the export to the user's shell rc so a new terminal
+# picks it up. We avoid /usr/local/bin (sudo on Apple Silicon) and brew's
+# prefix (namespace violation, brew doctor complains).
+bold "Step 8: Install booth CLI on PATH"
+USER_BIN="$HOME/.local/bin"
+mkdir -p "$USER_BIN"
+CLI_LINK="$USER_BIN/booth"
+if [ -L "$CLI_LINK" ] || [ -f "$CLI_LINK" ]; then
+  CURRENT_TARGET="$(readlink "$CLI_LINK" 2>/dev/null || echo "")"
+  if [ "$CURRENT_TARGET" = "$PROJECT_DIR/bin/booth" ]; then
+    ok "booth CLI already linked at $CLI_LINK"
+  else
+    ln -sf "$PROJECT_DIR/bin/booth" "$CLI_LINK"
+    ok "booth CLI relinked at $CLI_LINK → $PROJECT_DIR/bin/booth"
+  fi
+else
+  ln -s "$PROJECT_DIR/bin/booth" "$CLI_LINK"
+  ok "booth CLI linked at $CLI_LINK → $PROJECT_DIR/bin/booth"
+fi
+
+# Clean up legacy brew-prefix symlinks left by older installer versions
+# (we briefly tried that; it pollutes brew's namespace).
+LEGACY_BREW_LINK="$(brew --prefix)/bin/booth"
+if [ -L "$LEGACY_BREW_LINK" ]; then
+  LEGACY_TARGET="$(readlink "$LEGACY_BREW_LINK")"
+  case "$LEGACY_TARGET" in
+    */booth/bin/booth)
+      rm -f "$LEGACY_BREW_LINK"
+      ok "removed legacy brew-prefix symlink at $LEGACY_BREW_LINK"
+      ;;
+  esac
+fi
+
+# Make sure ~/.local/bin is on PATH for the user's shell. Detect zsh vs bash
+# (macOS default is zsh since Catalina), edit the right rc file idempotently,
+# and tell the user to open a new terminal.
+PATH_LINE='export PATH="$HOME/.local/bin:$PATH"'
+PATH_MARKER='# Added by Booth installer — keep ~/.local/bin on PATH'
+case ":$PATH:" in
+  *":$USER_BIN:"*) PATH_OK=true ;;
+  *) PATH_OK=false ;;
+esac
+
+if $PATH_OK; then
+  ok "$USER_BIN already on PATH"
+else
+  USER_SHELL="$(basename "${SHELL:-/bin/zsh}")"
+  case "$USER_SHELL" in
+    zsh)  RC_FILE="$HOME/.zshrc" ;;
+    bash) RC_FILE="$HOME/.bash_profile" ;;
+    *)    RC_FILE="" ;;
+  esac
+
+  if [ -n "$RC_FILE" ]; then
+    touch "$RC_FILE"
+    if grep -Fq "$PATH_MARKER" "$RC_FILE" 2>/dev/null; then
+      ok "PATH export already present in $RC_FILE (open a new terminal to pick it up)"
+    else
+      printf '\n%s\n%s\n' "$PATH_MARKER" "$PATH_LINE" >> "$RC_FILE"
+      ok "added PATH export to $RC_FILE — open a new terminal (or run: source $RC_FILE)"
+    fi
+  else
+    warn "Unrecognized shell '$USER_SHELL'. Add this line to your shell rc manually: $PATH_LINE"
+  fi
+fi
+
+# ── 9. Build the .app bundle
+bold "Step 9: Build Booth.app"
 cd "$PROJECT_DIR/app"
 
 if [ ! -d ".venv" ]; then
@@ -137,8 +229,8 @@ else
   warn "py2app build did not produce dist/Booth.app — check the output above."
 fi
 
-# ── 8. Hotkey daemon (skhd) — optional, for Cmd+Option+P toggle
-bold "Step 9: Hotkey (skhd, optional)"
+# ── 10. Hotkey daemon (skhd) — optional, for Cmd+Option+P toggle
+bold "Step 10: Hotkey (skhd, optional)"
 if command -v skhd >/dev/null 2>&1; then
   ok "skhd already installed"
 else
@@ -157,7 +249,7 @@ echo "  1. Open Booth.app from /Applications — it idles in your menu bar and"
 echo "     keeps the voice daemon warm so synth is fast on every call."
 echo "  2. Set the default Telegram chat: echo 'YOUR_CHAT_ID' >> $CHAT_IDS_FILE"
 echo "     (see docs/BOT_SETUP.md to find your chat_id)"
-echo "  3. Test outbound: $PROJECT_DIR/bin/booth say 'Hello, world.'"
+echo "  3. Test outbound: booth say 'Hello, world.'"
 echo "  4. Wire your AI agent to call 'booth say \"...\"' for voice replies, and"
 echo "     'booth transcribe <audio.oga>' when your Telegram MCP delivers a"
 echo "     voice note. Booth doesn't bridge Telegram itself — your existing"
