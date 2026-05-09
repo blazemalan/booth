@@ -13,7 +13,7 @@ set -e
 PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 HOOK_SCRIPT="$PROJECT_DIR/scripts/booth_hook.sh"
 BOOTH_MD_SRC="$PROJECT_DIR/booth.md"
-BOOTH_HOME="$HOME/.local/share/booth"
+BOOTH_HOME="${BOOTH_HOME:-$HOME/.local/share/booth}"
 SETTINGS="$HOME/.claude/settings.json"
 
 bold() { printf "\033[1m%s\033[0m\n" "$*"; }

@@ -144,6 +144,34 @@ You'll need a Telegram bot token. Two paths:
 - **Already have a bot wired into your bridge?** Use the same token — Booth doesn't poll `getUpdates`, so no conflict.
 - **Don't have one yet?** [Five-minute walkthrough in `docs/BOT_SETUP.md`](docs/BOT_SETUP.md).
 
+## Multiple agents on one Mac
+
+Running more than one AI agent that needs voice (e.g. Cinder + Hans + a third)? Each agent should send through its **own** Telegram bot, not share one — otherwise replies all show up in the same chat thread and identities cross-wire.
+
+Booth supports this via the `BOOTH_HOME` env var. The default state dir is `~/.local/share/booth/`. Override per-agent and you get parallel installs that share the heavy stuff (Kokoro models, runtime venv, the menu-bar app) but keep tokens, sockets, daemons, and logs separate.
+
+```bash
+# 1. Make a bot for the second agent in @BotFather, get its token.
+# 2. Spin up the agent's Booth state dir:
+mkdir -p ~/.local/share/booth-agent2
+echo "ITS_BOT_TOKEN" > ~/.local/share/booth-agent2/telegram_bot_token
+chmod 600 ~/.local/share/booth-agent2/telegram_bot_token
+echo "YOUR_CHAT_ID" > ~/.local/share/booth-agent2/chat_ids
+cp ~/.local/share/booth/booth.md ~/.local/share/booth-agent2/booth.md
+```
+
+Then in the agent's project, set the env var so its `claude` session picks it up. For Claude Code, add to `<project>/.claude/settings.json`:
+
+```json
+{
+  "env": {
+    "BOOTH_HOME": "/Users/you/.local/share/booth-agent2"
+  }
+}
+```
+
+Now `booth say` from that agent's session sends through *its* bot, lands in *its* thread. The Kokoro daemon, socket, and PID file all live under `$BOOTH_HOME` so the two agents don't fight over `/tmp`. The `.venv` is reused from the default install — no need to duplicate the model deps.
+
 ## System requirements
 
 - **Mac:** Apple Silicon (M1, M2, M3, M4) recommended. Intel Macs work but TTS synthesis is 3–5× slower.

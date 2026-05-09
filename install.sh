@@ -37,7 +37,11 @@ fi
 PROJECT_DIR="$( cd "$( dirname "$SCRIPT_PATH" )" && pwd )"
 KOKORO_DIR="$HOME/.local/share/kokoro-tts"
 WHISPER_DIR="$HOME/.local/share/whisper"
-BOOTH_HOME="$HOME/.local/share/booth"
+# BOOTH_HOME defaults to the standard location but can be overridden so a
+# second agent on the same Mac (e.g. Hans alongside Cinder) can install its
+# own state dir with a separate bot token. Each agent's `claude` session
+# exports BOOTH_HOME from its project's .claude/settings.json env block.
+BOOTH_HOME="${BOOTH_HOME:-$HOME/.local/share/booth}"
 APP_DEST="/Applications/Booth.app"
 TOKEN_FILE="$BOOTH_HOME/telegram_bot_token"
 CHAT_IDS_FILE="$BOOTH_HOME/chat_ids"

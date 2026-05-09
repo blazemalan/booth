@@ -31,7 +31,10 @@ BOOTH_HOME = Path(os.environ.get("BOOTH_HOME", HOME / ".local/share/booth"))
 TOKEN_FILE = BOOTH_HOME / "telegram_bot_token"
 CHAT_IDS_FILE = BOOTH_HOME / "chat_ids"
 
-DAEMON_SOCKET = Path("/tmp/booth_voice.sock")
+# Per-instance socket — lives under BOOTH_HOME so two agents (Cinder, Hans, ...)
+# don't fight over a single /tmp socket and accidentally send through each
+# other's bot. The daemon resolves the same path from BOOTH_HOME.
+DAEMON_SOCKET = BOOTH_HOME / "voice.sock"
 DAEMON_SCRIPT = Path(__file__).parent / "voice_daemon.py"
 
 DEFAULT_VOICE = "af_heart"
@@ -88,7 +91,7 @@ def spawn_daemon() -> None:
         if daemon_alive():
             return
         time.sleep(0.2)
-    raise SystemExit("daemon failed to start within 15s — check ~/.local/share/booth/voice_daemon.log")
+    raise SystemExit(f"daemon failed to start within 15s — check {BOOTH_HOME}/voice_daemon.log")
 
 
 def synth_via_daemon(text: str, voice: str, speed: float, out_wav: Path) -> dict:

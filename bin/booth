@@ -28,14 +28,27 @@ SRC_DIR="$BOOTH_DIR/src"
 # Prefer the runtime venv that install.sh creates (kokoro_onnx + onnxruntime
 # + numpy live there). Fall back to system python3 if the venv isn't set up
 # yet — say/transcribe will still work for daemon-already-running cases.
-RUNTIME_PY="${HOME}/.local/share/booth/.venv/bin/python"
+# BOOTH_HOME defaults to ~/.local/share/booth/ but can be overridden per-agent
+# to point at a separate instance with its own bot token + daemon.
+BOOTH_HOME_DIR="${BOOTH_HOME:-${HOME}/.local/share/booth}"
+RUNTIME_PY="${BOOTH_HOME_DIR}/.venv/bin/python"
+# Most instances share the default venv (kokoro models are read-only). If a
+# per-instance venv doesn't exist, fall back to the default location so a
+# Hans-style override doesn't need its own venv copy.
+DEFAULT_RUNTIME_PY="${HOME}/.local/share/booth/.venv/bin/python"
 if [ -n "${BOOTH_PY:-}" ]; then
   PY="$BOOTH_PY"
 elif [ -x "$RUNTIME_PY" ]; then
   PY="$RUNTIME_PY"
+elif [ -x "$DEFAULT_RUNTIME_PY" ]; then
+  PY="$DEFAULT_RUNTIME_PY"
 else
   PY="python3"
 fi
+
+# Honor any caller-supplied BOOTH_HOME so the python modules pick up the
+# per-instance state dir for token/socket/log paths.
+export BOOTH_HOME="$BOOTH_HOME_DIR"
 
 cmd="${1:-help}"
 shift || true

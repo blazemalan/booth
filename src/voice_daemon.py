@@ -3,10 +3,15 @@
 
 Lifecycle:
   - Spawned on demand by `booth say` when the socket isn't there
-  - Listens on /tmp/booth_voice.sock (Unix domain socket)
+  - Listens on $BOOTH_HOME/voice.sock (Unix domain socket, per-instance)
   - Loads Kokoro once at startup with CoreML+CPU providers (Apple Neural Engine)
   - 30-minute idle timeout: exits cleanly if no requests in 30 min
-  - PID file at /tmp/booth_voice.pid
+  - PID file at $BOOTH_HOME/voice.pid
+
+Multi-instance: every per-agent path is rooted at $BOOTH_HOME (default
+~/.local/share/booth/). Setting BOOTH_HOME=~/.local/share/booth-hans/ in
+another agent's environment gives that agent its own bot token, socket,
+daemon, and logs — no collisions with the default instance.
 
 Protocol (newline-delimited JSON):
   request:  {"text": str, "voice": str, "speed": float, "out_wav": str}
@@ -24,9 +29,10 @@ import wave
 from pathlib import Path
 
 HOME = Path.home()
-SOCKET_PATH = Path("/tmp/booth_voice.sock")
-PID_PATH = Path("/tmp/booth_voice.pid")
-LOG_PATH = HOME / ".local/share/booth/voice_daemon.log"
+BOOTH_HOME = Path(os.environ.get("BOOTH_HOME", HOME / ".local/share/booth"))
+SOCKET_PATH = BOOTH_HOME / "voice.sock"
+PID_PATH = BOOTH_HOME / "voice.pid"
+LOG_PATH = BOOTH_HOME / "voice_daemon.log"
 KOKORO_MODEL = HOME / ".local/share/kokoro-tts/kokoro-v1.0.fp16.onnx"
 KOKORO_VOICES = HOME / ".local/share/kokoro-tts/voices-v1.0.bin"
 
