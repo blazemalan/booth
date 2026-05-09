@@ -117,13 +117,26 @@ if [ ! -f "$TOKEN_FILE" ]; then
   echo "Need a Telegram bot token. Don't have one yet?"
   echo "→ See docs/BOT_SETUP.md for the 5-minute walkthrough."
   echo
-  read -rp "Paste your bot token (or press Enter to skip and add later): " TOKEN
+  TOKEN=""
+  # When the script is invoked via `curl | bash`, stdin is the pipe — a plain
+  # `read` returns empty without ever showing the prompt. Detect that case
+  # and read from /dev/tty (the user's actual terminal) so the prompt works
+  # in both `./install.sh` and curl-pipe invocations. Fall back to a clean
+  # skip-with-instructions if there's no controlling terminal at all (CI).
+  if [ -t 0 ]; then
+    read -rp "Paste your bot token (or press Enter to skip and add later): " TOKEN
+  elif [ -e /dev/tty ]; then
+    printf "Paste your bot token (or press Enter to skip and add later): "
+    IFS= read -r TOKEN < /dev/tty || true
+  else
+    warn "Non-interactive install — skipping token prompt."
+  fi
   if [ -n "$TOKEN" ]; then
     echo "$TOKEN" > "$TOKEN_FILE"
     chmod 600 "$TOKEN_FILE"
     ok "Token saved to $TOKEN_FILE (mode 600)"
   else
-    warn "Skipped. Add it later with: echo 'YOUR_TOKEN' > $TOKEN_FILE && chmod 600 $TOKEN_FILE"
+    warn "Add your token later with: echo 'YOUR_TOKEN' > $TOKEN_FILE && chmod 600 $TOKEN_FILE"
   fi
 else
   ok "Token already configured at $TOKEN_FILE"
