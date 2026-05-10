@@ -103,9 +103,47 @@ Your bridge handles the chat. Booth handles voice on both ends. They share a bot
 
 ## What it does
 
-- **Outbound voice:** your agent calls `booth say "..."`. Booth synthesizes locally with [Kokoro-onnx](https://github.com/thewh1teagle/kokoro-onnx) on the Apple Neural Engine, encodes Opus, posts to Telegram's `sendVoice`. Your phone buzzes with a real voice bubble in ~2.5 seconds.
+- **Outbound voice:** your agent calls `booth say "..."`. Booth synthesizes the audio (locally via [Kokoro-onnx](https://github.com/thewh1teagle/kokoro-onnx) on the Apple Neural Engine, or remotely via ElevenLabs — your choice, see [Backends](#backends)), encodes Opus, posts to Telegram's `sendVoice`. Your phone buzzes with a real voice bubble in ~2.5 seconds.
 - **Inbound transcription:** when your bridge delivers a voice note (with the audio file path), your agent calls `booth transcribe path.oga` and gets the text from [whisper.cpp](https://github.com/ggerganov/whisper.cpp). Local, fast, free.
 - **Self-trigger (Claude Code only):** `booth inject "/compact"` AppleScripts the slash command into your front Terminal session — useful when you're not at the keyboard but your agent's running long.
+
+## Backends
+
+Booth ships with two synthesis backends. Pick one at install time, swap any time by editing `$BOOTH_HOME/config.json`.
+
+| | Kokoro *(default)* | ElevenLabs |
+|---|---|---|
+| Cost | free | paid (~$5/mo for ~100 min of speech, more on higher tiers) |
+| Where it runs | local, on your Mac | ElevenLabs's servers, HTTP |
+| First-call latency | ~3–4s cold (model load), ~0.7–1.0s warm | ~75ms model + network round-trip |
+| Voice catalogue | ~50 voices that ship with Kokoro | whatever's in your ElevenLabs account |
+| Daemon | shared 290 MB process keeps Kokoro hot | none — direct HTTP, nothing to keep loaded |
+| API key needed | no | yes — see [elevenlabs.io](https://elevenlabs.io) |
+
+**Pick Kokoro** if you want zero monthly cost, no API key, and Kokoro's voice roster is good enough.
+
+**Pick ElevenLabs** if you've created or chosen a specific voice on your ElevenLabs account that you want your agent to use, or you need a language/accent Kokoro doesn't ship.
+
+The same `booth say` command works for both. Backend is one config key.
+
+```json
+// $BOOTH_HOME/config.json
+{
+  "backend": "elevenlabs",
+  "elevenlabs": {
+    "voice_id": "21m00Tcm4TlvDq8ikWAM",
+    "model": "eleven_flash_v2_5"
+  }
+}
+```
+
+When the backend is `elevenlabs`, drop your API key at `$BOOTH_HOME/elevenlabs_api_key` (mode 600). Voice id and model live in `config.json` so you can swap voices without touching code.
+
+**On failures:** Booth fails *loud* on quota exhaustion, invalid keys, or network errors. It does not silently fall back to Kokoro. Voice identity is the contract — silently swapping engines mid-conversation would break it. The calling agent decides what to do on a failed call: drop, retry, or fall back to a text reply.
+
+> *"Voice quality and voice identity are different problems."*
+
+That's why two backends exist. They make different trade-offs on each axis.
 
 ## Why Telegram (and not iMessage)
 
@@ -193,6 +231,16 @@ Now `booth say` from that agent's session sends through *its* bot, lands in *its
 ## Voices
 
 Kokoro ships 50+ voices, graded A through F by the model author. Booth defaults to `af_heart` — the only A-grade voice in the roster. Swap with `--voice af_bella` etc.
+
+ElevenLabs has its own voice catalogue under your account — voice ids look like `21m00Tcm4TlvDq8ikWAM`. Set the default in `$BOOTH_HOME/config.json`'s `"elevenlabs": {"voice_id": "..."}` field, or override per-call with `--voice`.
+
+## Troubleshooting
+
+**Kokoro daemon keeps idling out** — if you've set `backend: elevenlabs` and never call Kokoro, the daemon will exit cleanly after 30 minutes idle. That's correct behaviour, not a bug. The next Kokoro call (if you switch back) auto-respawns it.
+
+**ElevenLabs returned 401 / 429 / network error** — Booth fails loud on these by design. Check `$BOOTH_HOME/elevenlabs_api_key` is set and your account has credits. If you want continuity over identity, your *agent* is the right place to catch the failure and fall back (e.g. send a text reply instead) — Booth itself will not silently switch to Kokoro.
+
+**Voice bubble shows up as a tap-to-play file instead of a waveform** — `opus-tools` may not be installed. `brew install opus-tools` and try again.
 
 ## Compatibility
 

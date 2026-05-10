@@ -1,17 +1,27 @@
 #!/usr/bin/env python3
 """Booth — outbound voice. Send a Telegram voice bubble in the configured voice.
 
-Pipeline: text → Kokoro daemon → Opus OGG → Telegram sendVoice.
+Pipeline: text → backend synth (Kokoro daemon OR ElevenLabs HTTP) →
+Opus OGG → Telegram sendVoice.
 
 Usage:
     python -m booth.say "Hello, Blaze."
     python -m booth.say --voice af_bella --speed 1.1 "Custom voice."
+    python -m booth.say --backend elevenlabs --voice 21m00Tcm4TlvDq8ikWAM "..."
     python -m booth.say --dry-run "Test the synth without sending."
 
-Reads bot token from $BOOTH_HOME/telegram_bot_token (default: ~/.local/share/booth/).
-Defaults the chat_id to the first entry in $BOOTH_HOME/chat_ids (one chat ID per line).
+Reads bot token from $BOOTH_HOME/telegram_bot_token.
+Defaults chat_id to the first entry in $BOOTH_HOME/chat_ids.
+Backend + per-backend defaults come from $BOOTH_HOME/config.json (optional;
+falls back to Kokoro with built-in defaults if absent).
 
-Auto-spawns the voice daemon if the socket isn't there.
+Auto-spawns the Kokoro voice daemon if needed. ElevenLabs bypasses the
+daemon entirely — it's HTTP-only.
+
+Note: --voice overrides the configured voice per-call (Kokoro voice name OR
+ElevenLabs voice_id, depending on backend). The ElevenLabs model isn't
+exposed as a CLI flag — it's a set-once choice in config.json's
+"elevenlabs": {"model": "..."} field.
 """
 from __future__ import annotations
 
@@ -30,15 +40,28 @@ HOME = Path.home()
 BOOTH_HOME = Path(os.environ.get("BOOTH_HOME", HOME / ".local/share/booth"))
 TOKEN_FILE = BOOTH_HOME / "telegram_bot_token"
 CHAT_IDS_FILE = BOOTH_HOME / "chat_ids"
+CONFIG_FILE = BOOTH_HOME / "config.json"
 
 # Daemon socket lives in the per-user temp dir, shared across every bot on
-# the Mac. The daemon does pure synthesis — no bot identity in it — so one
-# daemon serves Cinder, Hans, and anyone else. Bot identity (token, chat)
-# stays per-$BOOTH_HOME and is supplied at upload time, not synth time.
+# the Mac. The daemon does pure Kokoro synthesis — no bot identity in it,
+# no notion of backends — so one daemon serves every Kokoro user.
+# ElevenLabs bypasses this entirely (HTTP-only, nothing to keep loaded).
 DAEMON_SOCKET = Path(tempfile.gettempdir()) / "booth_voice.sock"
 DAEMON_SCRIPT = Path(__file__).parent / "voice_daemon.py"
 
 DEFAULT_VOICE = "af_heart"
+
+
+def load_config() -> dict:
+    """Load $BOOTH_HOME/config.json. Falls back to Kokoro defaults if absent
+    so existing installs (and anyone who never sets up a config) keep working
+    exactly as before."""
+    if CONFIG_FILE.exists():
+        try:
+            return json.loads(CONFIG_FILE.read_text())
+        except json.JSONDecodeError as e:
+            raise SystemExit(f"{CONFIG_FILE} is not valid JSON: {e}")
+    return {"backend": "kokoro"}
 
 
 def load_bot_token() -> str:
@@ -116,6 +139,47 @@ def synth_via_daemon(text: str, voice: str, speed: float, out_wav: Path) -> dict
     return resp
 
 
+def synth_dispatch(text: str, args, config: dict, out_wav: Path) -> dict:
+    """Pick a backend and synthesize. Returns {samples, sr, backend}.
+
+    Resolution order for everything except the text itself:
+      1. CLI flag (--backend, --voice, --speed) wins
+      2. config.json's per-backend section wins next
+      3. Built-in defaults
+
+    Failures from either backend propagate as SystemExit. Booth never silently
+    falls back from ElevenLabs to Kokoro — voice identity is the contract,
+    silent backend swaps would break it. The calling agent decides what to
+    do on failure (retry, drop, send a text reply on Telegram, etc.)."""
+    backend = args.backend or config.get("backend", "kokoro")
+
+    if backend == "kokoro":
+        kk = config.get("kokoro", {})
+        voice = args.voice or kk.get("voice") or DEFAULT_VOICE
+        speed = args.speed if args.speed is not None else kk.get("speed", 1.0)
+        info = synth_via_daemon(text, voice, speed, out_wav)
+        return {**info, "backend": "kokoro"}
+
+    if backend == "elevenlabs":
+        # Imported lazily so installs that never touch ElevenLabs don't pay
+        # the import cost (and so a missing module doesn't break Kokoro users).
+        # Bare `from elevenlabs_synth ...` works because say.py is invoked as a
+        # script (Python adds the script's dir to sys.path). If Booth ever
+        # gets refactored into a real package, change to a relative import.
+        from elevenlabs_synth import (
+            synth_to_wav as eleven_synth,
+            DEFAULT_VOICE_ID,
+            DEFAULT_MODEL,
+        )
+        el = config.get("elevenlabs", {})
+        voice_id = args.voice or el.get("voice_id") or DEFAULT_VOICE_ID
+        model = el.get("model") or DEFAULT_MODEL
+        samples, sr = eleven_synth(text, voice_id, model, out_wav)
+        return {"samples": samples, "sr": sr, "backend": "elevenlabs"}
+
+    raise SystemExit(f"unknown backend: {backend!r}. Valid: kokoro, elevenlabs.")
+
+
 def encode_opus(wav_path: Path, ogg_path: Path) -> None:
     res = subprocess.run(
         ["opusenc", "--bitrate", "32", "--vbr", str(wav_path), str(ogg_path)],
@@ -161,8 +225,17 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("text", nargs="?", help="text to speak (or use --text)")
     ap.add_argument("--text", dest="text_flag", help="text to speak")
-    ap.add_argument("--voice", default=DEFAULT_VOICE, help=f"Kokoro voice id (default: {DEFAULT_VOICE})")
-    ap.add_argument("--speed", type=float, default=1.0)
+    ap.add_argument(
+        "--backend",
+        choices=["kokoro", "elevenlabs"],
+        help="override the backend in $BOOTH_HOME/config.json for this call",
+    )
+    ap.add_argument(
+        "--voice",
+        help="voice id — Kokoro voice name (e.g. af_heart) or ElevenLabs voice_id",
+    )
+    ap.add_argument("--speed", type=float, default=None,
+                    help="Kokoro speed multiplier (1.0 = normal). Ignored on ElevenLabs.")
     ap.add_argument("--chat-id", help="Telegram chat ID (defaults to first entry in $BOOTH_HOME/chat_ids)")
     ap.add_argument("--caption", help="optional caption shown next to the voice bubble")
     ap.add_argument("--keep", action="store_true", help="keep intermediate files")
@@ -174,15 +247,20 @@ def main():
     if not text:
         ap.error("provide text as positional arg or --text")
 
+    config = load_config()
+
     with tempfile.TemporaryDirectory(prefix="booth_voice_") as td_str:
         td = Path("/tmp" if args.keep else td_str)
         wav_path = td / "voice.wav"
         ogg_path = td / "voice.ogg"
 
         t0 = time.time()
-        info = synth_via_daemon(text, args.voice, args.speed, wav_path)
+        info = synth_dispatch(text, args, config, wav_path)
         t_synth = time.time() - t0
-        sys.stderr.write(f"[synth] {info['samples']} samples @ {info['sr']}Hz in {t_synth:.2f}s\n")
+        sys.stderr.write(
+            f"[synth/{info['backend']}] {info['samples']} samples "
+            f"@ {info['sr']}Hz in {t_synth:.2f}s\n"
+        )
 
         encode_opus(wav_path, ogg_path)
 
