@@ -142,11 +142,70 @@ else
   ok "Token already configured at $TOKEN_FILE"
 fi
 
-# ── 7. Runtime venv at $BOOTH_HOME/.venv
+# ── 7. Synth backend choice (Kokoro / ElevenLabs)
+# Default = Kokoro (free, local, ships with Booth). ElevenLabs is opt-in for
+# users who want a cloud-hosted voice catalogue (typically because they've
+# created or chosen a specific voice on ElevenLabs's side they want to use).
+# Existing installs that already have a config.json are left alone.
+bold "Step 7: Synth backend"
+CONFIG_FILE="$BOOTH_HOME/config.json"
+ELEVEN_KEY_FILE="$BOOTH_HOME/elevenlabs_api_key"
+if [ -f "$CONFIG_FILE" ]; then
+  ok "Backend config already exists at $CONFIG_FILE — keeping it"
+else
+  echo
+  echo "Booth ships with two synth backends:"
+  echo "  kokoro      — local, free, Apple Neural Engine, ~50 voices (default)"
+  echo "  elevenlabs  — paid HTTP API, your account's voice catalogue"
+  echo
+  BACKEND_CHOICE=""
+  if [ -t 0 ]; then
+    read -rp "Pick a backend [kokoro / elevenlabs] (default: kokoro): " BACKEND_CHOICE
+  elif [ -e /dev/tty ]; then
+    printf "Pick a backend [kokoro / elevenlabs] (default: kokoro): "
+    IFS= read -r BACKEND_CHOICE < /dev/tty || true
+  fi
+  case "${BACKEND_CHOICE:-kokoro}" in
+    elevenlabs|el|11)
+      ELEVEN_KEY=""
+      if [ -t 0 ]; then
+        read -rp "Paste your ElevenLabs API key (or Enter to skip): " ELEVEN_KEY
+      elif [ -e /dev/tty ]; then
+        printf "Paste your ElevenLabs API key (or Enter to skip): "
+        IFS= read -r ELEVEN_KEY < /dev/tty || true
+      fi
+      if [ -n "$ELEVEN_KEY" ]; then
+        echo "$ELEVEN_KEY" > "$ELEVEN_KEY_FILE"
+        chmod 600 "$ELEVEN_KEY_FILE"
+        ok "ElevenLabs API key saved at $ELEVEN_KEY_FILE (mode 600)"
+      else
+        warn "Skipped — add the key later: echo 'YOUR_KEY' > $ELEVEN_KEY_FILE && chmod 600 $ELEVEN_KEY_FILE"
+      fi
+      cat > "$CONFIG_FILE" <<'JSON'
+{
+  "backend": "elevenlabs",
+  "elevenlabs": {
+    "voice_id": "21m00Tcm4TlvDq8ikWAM",
+    "model": "eleven_flash_v2_5"
+  }
+}
+JSON
+      ok "Backend = elevenlabs (config: $CONFIG_FILE)"
+      echo "  Edit $CONFIG_FILE to change the voice_id (find yours on the ElevenLabs site)."
+      ;;
+    *)
+      # Kokoro is the default — say.py treats a missing config as Kokoro,
+      # so we don't need to write a file. Keeps existing installs untouched.
+      ok "Backend = kokoro (default — no config file needed)"
+      ;;
+  esac
+fi
+
+# ── 8. Runtime venv at $BOOTH_HOME/.venv
 # This venv holds kokoro_onnx + onnxruntime + numpy. Booth.app's bundled python
 # only has rumps; the menu-bar app subprocess-launches src/voice_daemon.py
 # through THIS venv. Decouples UI deps from runtime deps.
-bold "Step 7: Runtime venv"
+bold "Step 8: Runtime venv"
 RUNTIME_VENV="$BOOTH_HOME/.venv"
 PY=$(brew --prefix python@3.12)/bin/python3.12
 if [ ! -d "$RUNTIME_VENV" ]; then
@@ -156,13 +215,13 @@ fi
 "$RUNTIME_VENV/bin/python" -m pip install kokoro-onnx onnxruntime numpy
 ok "Runtime venv at $RUNTIME_VENV"
 
-# ── 8. Install booth CLI on PATH
+# ── 9. Install booth CLI on PATH
 # Symlink bin/booth into ~/.local/bin (XDG user-local convention — same dir
 # pipx, uv, rustup, and most modern Mac/Linux CLIs use). If ~/.local/bin
 # isn't on PATH, append the export to the user's shell rc so a new terminal
 # picks it up. We avoid /usr/local/bin (sudo on Apple Silicon) and brew's
 # prefix (namespace violation, brew doctor complains).
-bold "Step 8: Install booth CLI on PATH"
+bold "Step 9: Install booth CLI on PATH"
 USER_BIN="$HOME/.local/bin"
 mkdir -p "$USER_BIN"
 CLI_LINK="$USER_BIN/booth"
@@ -225,8 +284,8 @@ else
   fi
 fi
 
-# ── 9. Build the .app bundle
-bold "Step 9: Build Booth.app"
+# ── 10. Build the .app bundle
+bold "Step 10: Build Booth.app"
 cd "$PROJECT_DIR/app"
 
 if [ ! -d ".venv" ]; then
@@ -246,8 +305,8 @@ else
   warn "py2app build did not produce dist/Booth.app — check the output above."
 fi
 
-# ── 10. Hotkey daemon (skhd) — optional, for Cmd+Option+P toggle
-bold "Step 10: Hotkey (skhd, optional)"
+# ── 11. Hotkey daemon (skhd) — optional, for Cmd+Option+P toggle
+bold "Step 11: Hotkey (skhd, optional)"
 if command -v skhd >/dev/null 2>&1; then
   ok "skhd already installed"
 else
