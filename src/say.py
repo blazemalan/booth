@@ -180,7 +180,11 @@ def synth_dispatch(text: str, args, config: dict, out_wav: Path) -> dict:
                 "or pass --voice <voice_id> for a one-off."
             )
         model = el.get("model") or DEFAULT_MODEL
-        samples, sr = eleven_synth(text, voice_id, model, out_wav)
+        # Optional voice_settings (stability, similarity_boost, etc.) live in
+        # config.json under "elevenlabs": {"voice_settings": {...}}. Caller
+        # values are merged onto sane defaults inside elevenlabs_synth.
+        voice_settings = el.get("voice_settings")
+        samples, sr = eleven_synth(text, voice_id, model, out_wav, voice_settings)
         return {"samples": samples, "sr": sr, "backend": "elevenlabs"}
 
     raise SystemExit(f"unknown backend: {backend!r}. Valid: kokoro, elevenlabs.")

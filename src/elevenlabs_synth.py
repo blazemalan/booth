@@ -43,6 +43,21 @@ KEY_FILE = BOOTH_HOME / "elevenlabs_api_key"
 DEFAULT_MODEL = "eleven_flash_v2_5"  # cheapest current model, ~0.5 credits/char
 SAMPLE_RATE = 24000  # matches output_format=pcm_24000
 
+# Default voice settings. Stability and similarity_boost run 0.0 to 1.0.
+# Higher stability = steadier, less emotional variance per call (good for
+# multi-sentence broadcast). Higher similarity_boost = closer to the source
+# voice's character (also amplifies any quirks). 0.75/0.75 with speaker
+# boost on is ElevenLabs's recommended "consistent" preset; without these,
+# the API falls back to per-voice defaults that can swing wildly on longer
+# inputs. Override per-call via $BOOTH_HOME/config.json under
+# "elevenlabs": {"voice_settings": {...}}.
+DEFAULT_VOICE_SETTINGS = {
+    "stability": 0.75,
+    "similarity_boost": 0.75,
+    "style": 0.0,
+    "use_speaker_boost": True,
+}
+
 
 def load_api_key() -> str:
     if not KEY_FILE.exists():
@@ -54,12 +69,22 @@ def load_api_key() -> str:
     return KEY_FILE.read_text().strip()
 
 
-def synth_to_wav(text: str, voice_id: str, model: str, out_wav: Path) -> tuple[int, int]:
+def synth_to_wav(
+    text: str,
+    voice_id: str,
+    model: str,
+    out_wav: Path,
+    voice_settings: dict | None = None,
+) -> tuple[int, int]:
     """Synthesize via ElevenLabs and write a WAV file.
 
     Output WAV is symmetric with voice_daemon.synth_to_wav: mono, 16-bit PCM,
     24 kHz. Returns (sample_count, sample_rate) matching the daemon's signature
     so the rest of say.py doesn't care which backend produced the file.
+
+    voice_settings dict (optional) controls stability/similarity_boost/style/
+    use_speaker_boost — see DEFAULT_VOICE_SETTINGS. Caller-supplied values
+    are merged onto the defaults so partial overrides work.
 
     Raises SystemExit on any HTTP/network/auth failure with the API's message
     in the error string. Caller (say.py → Booth's outer agent) decides what
@@ -67,7 +92,12 @@ def synth_to_wav(text: str, voice_id: str, model: str, out_wav: Path) -> tuple[i
     """
     key = load_api_key()
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}?output_format=pcm_24000"
-    body = json.dumps({"text": text, "model_id": model}).encode()
+    settings = {**DEFAULT_VOICE_SETTINGS, **(voice_settings or {})}
+    body = json.dumps({
+        "text": text,
+        "model_id": model,
+        "voice_settings": settings,
+    }).encode()
     req = urllib.request.Request(
         url,
         data=body,
