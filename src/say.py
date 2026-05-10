@@ -17,6 +17,11 @@ falls back to Kokoro with built-in defaults if absent).
 
 Auto-spawns the Kokoro voice daemon if needed. ElevenLabs bypasses the
 daemon entirely — it's HTTP-only.
+
+Note: --voice overrides the configured voice per-call (Kokoro voice name OR
+ElevenLabs voice_id, depending on backend). The ElevenLabs model isn't
+exposed as a CLI flag — it's a set-once choice in config.json's
+"elevenlabs": {"model": "..."} field.
 """
 from __future__ import annotations
 
@@ -158,6 +163,9 @@ def synth_dispatch(text: str, args, config: dict, out_wav: Path) -> dict:
     if backend == "elevenlabs":
         # Imported lazily so installs that never touch ElevenLabs don't pay
         # the import cost (and so a missing module doesn't break Kokoro users).
+        # Bare `from elevenlabs_synth ...` works because say.py is invoked as a
+        # script (Python adds the script's dir to sys.path). If Booth ever
+        # gets refactored into a real package, change to a relative import.
         from elevenlabs_synth import (
             synth_to_wav as eleven_synth,
             DEFAULT_VOICE_ID,

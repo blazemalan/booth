@@ -90,6 +90,12 @@ def synth_to_wav(text: str, voice_id: str, model: str, out_wav: Path) -> tuple[i
         ) from e
     except urllib.error.URLError as e:
         raise SystemExit(f"ElevenLabs network error: {e.reason}") from e
+    except OSError as e:
+        # Mid-stream failures — connection reset, body-read timeout,
+        # IncompleteRead. These don't all wrap in URLError, so catch the
+        # OSError parent so they fail loud instead of escaping as bare
+        # tracebacks.
+        raise SystemExit(f"ElevenLabs connection error: {e}") from e
 
     # Wrap raw PCM into a WAV with the daemon's shape so encode_opus is happy.
     with wave.open(str(out_wav), "wb") as w:

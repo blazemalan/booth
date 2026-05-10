@@ -165,8 +165,8 @@ else
     printf "Pick a backend [kokoro / elevenlabs] (default: kokoro): "
     IFS= read -r BACKEND_CHOICE < /dev/tty || true
   fi
-  case "${BACKEND_CHOICE:-kokoro}" in
-    elevenlabs|el|11)
+  case "$(echo "${BACKEND_CHOICE:-kokoro}" | tr '[:upper:]' '[:lower:]')" in
+    elevenlabs|el)
       ELEVEN_KEY=""
       if [ -t 0 ]; then
         read -rp "Paste your ElevenLabs API key (or Enter to skip): " ELEVEN_KEY
