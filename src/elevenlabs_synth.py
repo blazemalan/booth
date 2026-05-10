@@ -33,11 +33,14 @@ HOME = Path.home()
 BOOTH_HOME = Path(os.environ.get("BOOTH_HOME", HOME / ".local/share/booth"))
 KEY_FILE = BOOTH_HOME / "elevenlabs_api_key"
 
-# Defaults — overridable via $BOOTH_HOME/config.json or --voice flag.
-# "Rachel" is ElevenLabs's stock demo voice; pick whatever you actually want
-# in your config. eleven_flash_v2_5 is the low-latency multi-language model.
-DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
-DEFAULT_MODEL = "eleven_flash_v2_5"
+# No DEFAULT_VOICE_ID by design. Voice catalogues are per-account on
+# ElevenLabs, so any hardcoded default would silently fail for users whose
+# account doesn't have that voice — and the API returns a "library voice"
+# 402, not a useful "did you mean..." error. Force the user to set their own
+# voice_id explicitly via $BOOTH_HOME/config.json or --voice. Matches the
+# fail-loud contract: if you can't say the right thing, say nothing and
+# point the user at the fix.
+DEFAULT_MODEL = "eleven_flash_v2_5"  # cheapest current model, ~0.5 credits/char
 SAMPLE_RATE = 24000  # matches output_format=pcm_24000
 
 

@@ -131,13 +131,13 @@ The same `booth say` command works for both. Backend is one config key.
 {
   "backend": "elevenlabs",
   "elevenlabs": {
-    "voice_id": "21m00Tcm4TlvDq8ikWAM",
+    "voice_id": "<your voice id from elevenlabs.io>",
     "model": "eleven_flash_v2_5"
   }
 }
 ```
 
-When the backend is `elevenlabs`, drop your API key at `$BOOTH_HOME/elevenlabs_api_key` (mode 600). Voice id and model live in `config.json` so you can swap voices without touching code.
+When the backend is `elevenlabs`, drop your API key at `$BOOTH_HOME/elevenlabs_api_key` (mode 600). Voice id and model live in `config.json` so you can swap voices without touching code. **There's no default `voice_id`** — voice catalogues are per-account, so Booth requires you to set yours explicitly. Find your voice ids at [elevenlabs.io/app/voice-library](https://elevenlabs.io/app/voice-library).
 
 **On failures:** Booth fails *loud* on quota exhaustion, invalid keys, or network errors. It does not silently fall back to Kokoro. Voice identity is the contract — silently swapping engines mid-conversation would break it. The calling agent decides what to do on a failed call: drop, retry, or fall back to a text reply.
 

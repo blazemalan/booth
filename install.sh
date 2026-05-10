@@ -181,17 +181,29 @@ else
       else
         warn "Skipped — add the key later: echo 'YOUR_KEY' > $ELEVEN_KEY_FILE && chmod 600 $ELEVEN_KEY_FILE"
       fi
-      cat > "$CONFIG_FILE" <<'JSON'
-{
-  "backend": "elevenlabs",
-  "elevenlabs": {
-    "voice_id": "21m00Tcm4TlvDq8ikWAM",
-    "model": "eleven_flash_v2_5"
-  }
-}
-JSON
+      # Prompt for voice_id — voice catalogues are per-account, so we don't
+      # bake in a default. A baked-in id would silently fail for users whose
+      # account doesn't have it. Blank is OK at install time; say.py fails
+      # loud with a clear remediation message if the user later runs
+      # booth say without a voice_id configured.
+      ELEVEN_VOICE=""
+      echo
+      echo "  Find your voice_id at https://elevenlabs.io/app/voice-library"
+      echo "  (e.g. 'cgSgspJ2msm6clMCkdW9' for Jessica)."
+      if [ -t 0 ]; then
+        read -rp "Paste your ElevenLabs voice_id (or Enter to add later): " ELEVEN_VOICE
+      elif [ -e /dev/tty ]; then
+        printf "Paste your ElevenLabs voice_id (or Enter to add later): "
+        IFS= read -r ELEVEN_VOICE < /dev/tty || true
+      fi
+      python3 -c "import json,sys; \
+json.dump({'backend':'elevenlabs', \
+'elevenlabs':{'voice_id': sys.argv[1], 'model':'eleven_flash_v2_5'}}, \
+open(sys.argv[2],'w'), indent=2)" "$ELEVEN_VOICE" "$CONFIG_FILE"
       ok "Backend = elevenlabs (config: $CONFIG_FILE)"
-      echo "  Edit $CONFIG_FILE to change the voice_id (find yours on the ElevenLabs site)."
+      if [ -z "$ELEVEN_VOICE" ]; then
+        warn "voice_id is blank — set it later by editing $CONFIG_FILE before running booth say."
+      fi
       ;;
     *)
       # Kokoro is the default — say.py treats a missing config as Kokoro,

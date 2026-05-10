@@ -166,13 +166,19 @@ def synth_dispatch(text: str, args, config: dict, out_wav: Path) -> dict:
         # Bare `from elevenlabs_synth ...` works because say.py is invoked as a
         # script (Python adds the script's dir to sys.path). If Booth ever
         # gets refactored into a real package, change to a relative import.
-        from elevenlabs_synth import (
-            synth_to_wav as eleven_synth,
-            DEFAULT_VOICE_ID,
-            DEFAULT_MODEL,
-        )
+        from elevenlabs_synth import synth_to_wav as eleven_synth, DEFAULT_MODEL
         el = config.get("elevenlabs", {})
-        voice_id = args.voice or el.get("voice_id") or DEFAULT_VOICE_ID
+        voice_id = args.voice or el.get("voice_id")
+        if not voice_id:
+            # No hardcoded default — voice catalogues are per-account, so any
+            # baked-in default would silently fail for some users with an
+            # opaque "library voice" 402. Force the user to set their own.
+            raise SystemExit(
+                "ElevenLabs voice_id not set. Find yours at "
+                "https://elevenlabs.io/app/voice-library and add to "
+                f"{CONFIG_FILE} under \"elevenlabs\": {{\"voice_id\": \"...\"}}, "
+                "or pass --voice <voice_id> for a one-off."
+            )
         model = el.get("model") or DEFAULT_MODEL
         samples, sr = eleven_synth(text, voice_id, model, out_wav)
         return {"samples": samples, "sr": sr, "backend": "elevenlabs"}
