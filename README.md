@@ -15,7 +15,9 @@ The picture in my head: my agent at a radio booth, broadcasting from a back room
 That's where the name came from.
 
 <p align="center">
-  <img src="docs/screenshots/telegram-chat-example.jpg" alt="Booth voice messages in a Telegram chat with an AI agent" width="320" />
+  <img src="docs/screenshots/telegram-chat-example.jpg" alt="Booth voice messages in a Telegram chat with an AI agent" width="280" />
+  &nbsp;
+  <img src="docs/screenshots/telegram-chat-example-2.jpg" alt="Another Booth voice conversation — agent walking through install over voice notes" width="280" />
   <br/>
   <em>What it actually looks like — voice notes back and forth with your agent, on the phone you already have.</em>
 </p>
