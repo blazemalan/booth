@@ -296,29 +296,27 @@ else
   fi
 fi
 
-# ── 9b. Claude Code integration (auto-detected)
+# ── 9b. Claude Code PATH integration (auto-detected)
 # Booth's CLI lives in $HOME/.local/bin, but Claude Code's Bash tool spawns
 # non-interactive subshells that don't source ~/.zshrc. So even though the rc
 # edit above makes booth reachable from a fresh terminal, Claude Code itself
-# can't find it. Two fixes, both idempotent:
+# can't find it. Fix: merge env.PATH into ~/.claude/settings.json so every
+# Bash tool call Claude Code makes sees $HOME/.local/bin. Idempotent.
 #
-#   1. Merge env.PATH into ~/.claude/settings.json so every Bash tool call
-#      Claude Code makes sees $HOME/.local/bin.
-#   2. Inject booth.md content into ~/.claude/CLAUDE.md between markers, so
-#      the voice protocol loads on every Claude Code session — including
-#      mid-task voice messages that arrive via channel injection (which don't
-#      trigger UserPromptSubmit hooks).
+# No-ops if Claude Code isn't installed (~/.claude missing).
 #
-# Both steps no-op if Claude Code isn't installed (~/.claude missing).
-bold "Step 9b: Claude Code integration"
+# Voice protocol loading (booth.md) is intentionally NOT bundled here —
+# always-on injection wastes tokens on every session, including text-only
+# work that never touches voice. The proper fix is a Claude Code plugin that
+# hooks channel events natively (like the Telegram plugin does); tracked
+# separately. Users still get voice protocol via UserPromptSubmit hook for
+# first-turn voice messages — see scripts/install_claude_hook.sh.
+bold "Step 9b: Claude Code PATH integration"
 CLAUDE_DIR="$HOME/.claude"
 if [ ! -d "$CLAUDE_DIR" ]; then
   ok "Claude Code not detected at $CLAUDE_DIR — skipping. Booth still works for other agents."
 else
   CC_SETTINGS="$CLAUDE_DIR/settings.json"
-  CC_CLAUDE_MD="$CLAUDE_DIR/CLAUDE.md"
-
-  # 9b.1 — env.PATH in settings.json
   if command -v jq >/dev/null 2>&1; then
     if [ ! -f "$CC_SETTINGS" ]; then
       printf '{\n  "env": {\n    "PATH": "%s:${PATH}"\n  }\n}\n' "$USER_BIN" > "$CC_SETTINGS"
@@ -339,38 +337,6 @@ else
     fi
   else
     warn "jq not found — skipping settings.json merge. Install jq and re-run for Claude Code PATH fix."
-  fi
-
-  # 9b.2 — booth.md content in ~/.claude/CLAUDE.md (always-on voice protocol)
-  if [ -f "$PROJECT_DIR/booth.md" ]; then
-    BEGIN_MARKER='<!-- BEGIN BOOTH VOICE PROTOCOL — managed by booth installer, do not edit -->'
-    END_MARKER='<!-- END BOOTH VOICE PROTOCOL -->'
-    BOOTH_MD_CONTENT="$(cat "$PROJECT_DIR/booth.md")"
-
-    touch "$CC_CLAUDE_MD"
-    if grep -Fq "$BEGIN_MARKER" "$CC_CLAUDE_MD" 2>/dev/null; then
-      # Markers exist — replace content between them with current booth.md
-      python3 - "$CC_CLAUDE_MD" "$BEGIN_MARKER" "$END_MARKER" "$BOOTH_MD_CONTENT" <<'PYEOF'
-import sys, pathlib
-path, begin, end, content = sys.argv[1:5]
-text = pathlib.Path(path).read_text()
-bidx = text.find(begin)
-eidx = text.find(end, bidx)
-if bidx >= 0 and eidx >= 0:
-    new = text[:bidx] + begin + "\n" + content + "\n" + end + text[eidx + len(end):]
-    pathlib.Path(path).write_text(new)
-PYEOF
-      ok "refreshed booth voice protocol section in $CC_CLAUDE_MD"
-    else
-      # Markers don't exist — append the section
-      {
-        [ -s "$CC_CLAUDE_MD" ] && printf '\n'
-        printf '%s\n' "$BEGIN_MARKER"
-        printf '%s\n' "$BOOTH_MD_CONTENT"
-        printf '%s\n' "$END_MARKER"
-      } >> "$CC_CLAUDE_MD"
-      ok "added booth voice protocol section to $CC_CLAUDE_MD"
-    fi
   fi
 fi
 
