@@ -296,6 +296,97 @@ else
   fi
 fi
 
+# ── 9b. Claude Code integration (auto-detected)
+# Booth's CLI lives in $HOME/.local/bin, but Claude Code's Bash tool spawns
+# non-interactive subshells that don't source ~/.zshrc. So even though the rc
+# edit above makes booth reachable from a fresh terminal, Claude Code itself
+# can't find it. Two fixes, both idempotent:
+#
+#   1. Merge env.PATH into ~/.claude/settings.json so every Bash tool call
+#      Claude Code makes sees $HOME/.local/bin.
+#   2. Inject booth.md content into ~/.claude/CLAUDE.md between markers, so
+#      the voice protocol loads on every Claude Code session — including
+#      mid-task voice messages that arrive via channel injection (which don't
+#      trigger UserPromptSubmit hooks).
+#
+# Both steps no-op if Claude Code isn't installed (~/.claude missing).
+bold "Step 9b: Claude Code integration"
+CLAUDE_DIR="$HOME/.claude"
+if [ ! -d "$CLAUDE_DIR" ]; then
+  ok "Claude Code not detected at $CLAUDE_DIR — skipping. Booth still works for other agents."
+else
+  CC_SETTINGS="$CLAUDE_DIR/settings.json"
+  CC_CLAUDE_MD="$CLAUDE_DIR/CLAUDE.md"
+
+  # 9b.1 — env.PATH in settings.json
+  if command -v jq >/dev/null 2>&1; then
+    if [ ! -f "$CC_SETTINGS" ]; then
+      printf '{\n  "env": {\n    "PATH": "%s:${PATH}"\n  }\n}\n' "$USER_BIN" > "$CC_SETTINGS"
+      ok "wrote $CC_SETTINGS with PATH = $USER_BIN:\${PATH}"
+    else
+      TMP=$(mktemp)
+      jq --arg dir "$USER_BIN" '
+        .env //= {}
+        | if (.env.PATH // null) == null then
+            .env.PATH = ($dir + ":${PATH}")
+          elif (.env.PATH | contains($dir)) then
+            .
+          else
+            .env.PATH = ($dir + ":" + .env.PATH)
+          end
+      ' "$CC_SETTINGS" > "$TMP" && mv "$TMP" "$CC_SETTINGS"
+      ok "ensured $USER_BIN is on env.PATH in $CC_SETTINGS"
+    fi
+  else
+    warn "jq not found — skipping settings.json merge. Install jq and re-run for Claude Code PATH fix."
+  fi
+
+  # 9b.2 — booth.md content in ~/.claude/CLAUDE.md (always-on voice protocol)
+  if [ -f "$PROJECT_DIR/booth.md" ]; then
+    BEGIN_MARKER='<!-- BEGIN BOOTH VOICE PROTOCOL — managed by booth installer, do not edit -->'
+    END_MARKER='<!-- END BOOTH VOICE PROTOCOL -->'
+    BOOTH_MD_CONTENT="$(cat "$PROJECT_DIR/booth.md")"
+
+    touch "$CC_CLAUDE_MD"
+    if grep -Fq "$BEGIN_MARKER" "$CC_CLAUDE_MD" 2>/dev/null; then
+      # Markers exist — replace content between them with current booth.md
+      python3 - "$CC_CLAUDE_MD" "$BEGIN_MARKER" "$END_MARKER" "$BOOTH_MD_CONTENT" <<'PYEOF'
+import sys, pathlib
+path, begin, end, content = sys.argv[1:5]
+text = pathlib.Path(path).read_text()
+bidx = text.find(begin)
+eidx = text.find(end, bidx)
+if bidx >= 0 and eidx >= 0:
+    new = text[:bidx] + begin + "\n" + content + "\n" + end + text[eidx + len(end):]
+    pathlib.Path(path).write_text(new)
+PYEOF
+      ok "refreshed booth voice protocol section in $CC_CLAUDE_MD"
+    else
+      # Markers don't exist — append the section
+      {
+        [ -s "$CC_CLAUDE_MD" ] && printf '\n'
+        printf '%s\n' "$BEGIN_MARKER"
+        printf '%s\n' "$BOOTH_MD_CONTENT"
+        printf '%s\n' "$END_MARKER"
+      } >> "$CC_CLAUDE_MD"
+      ok "added booth voice protocol section to $CC_CLAUDE_MD"
+    fi
+  fi
+fi
+
+# ── 9c. Smoke test — verify booth CLI runs from a non-interactive bash subshell
+# This is the install-time check that catches the "Claude Code can't find booth"
+# class of regression. We deliberately strip PATH inheritance so the test only
+# passes if the CLI is reachable from a default-ish PATH (the fix above
+# guarantees it via Claude Code's settings.json, but here we just verify the
+# symlink itself is executable from a subshell, with $USER_BIN on PATH).
+bold "Step 9c: Smoke test"
+if PATH="$USER_BIN:/usr/bin:/bin" bash -c 'command -v booth >/dev/null && booth --help' >/dev/null 2>&1; then
+  ok "booth CLI reachable from a clean non-interactive subshell"
+else
+  warn "booth CLI failed the subshell smoke test. Check $CLI_LINK target and permissions."
+fi
+
 # ── 10. Build the .app bundle
 bold "Step 10: Build Booth.app"
 cd "$PROJECT_DIR/app"
